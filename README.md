@@ -2,6 +2,8 @@
 
 Neko is a frontend prototype for a "virtual pet x goal achievement" product. The MVP focuses on one savings goal: users create a goal, add daily progress, earn coins, unlock pet skins, and see achievements.
 
+Live app: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
+
 This project is intentionally frontend-only today. The code is structured so the product can later grow into a backend-backed web app and an iOS app without rewriting the core product rules.
 
 ## Current MVP Scope
@@ -178,6 +180,7 @@ This app is Vercel-ready:
 - Build command: `npm run build`
 - Output: Next.js default
 - Environment variables: none required for MVP
+- Production URL: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
 
 Because data is stored in localStorage, deployed users only see data on the same browser/device. This is expected for the MVP.
 
