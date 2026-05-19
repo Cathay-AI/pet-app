@@ -48,6 +48,7 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_GLOBAL_CONFIG: ${{ runner.temp }}/vercel
 
     steps:
       - name: Checkout
@@ -62,16 +63,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure Vercel auth
+        run: |
+          mkdir -p "$VERCEL_GLOBAL_CONFIG"
+          printf '%s' '${{ secrets.VERCEL_AUTH_JSON_B64 }}' | base64 --decode > "$VERCEL_GLOBAL_CONFIG/auth.json"
+          printf '%s' '${{ secrets.VERCEL_CONFIG_JSON_B64 }}' | base64 --decode > "$VERCEL_GLOBAL_CONFIG/config.json"
+
       - name: Pull Vercel preview environment
-        run: npx vercel@latest pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest pull --yes --environment=preview --global-config "$VERCEL_GLOBAL_CONFIG"
 
       - name: Build with Vercel
-        run: npx vercel@latest build --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest build --global-config "$VERCEL_GLOBAL_CONFIG"
 
       - name: Deploy Vercel preview
         id: deploy
         run: |
-          npx vercel@latest deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+          npx vercel@latest deploy --prebuilt --global-config "$VERCEL_GLOBAL_CONFIG" > deployment-url.txt
           url="$(tail -n 1 deployment-url.txt)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
@@ -121,6 +128,7 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_GLOBAL_CONFIG: ${{ runner.temp }}/vercel
 
     steps:
       - name: Checkout
@@ -135,15 +143,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure Vercel auth
+        run: |
+          mkdir -p "$VERCEL_GLOBAL_CONFIG"
+          printf '%s' '${{ secrets.VERCEL_AUTH_JSON_B64 }}' | base64 --decode > "$VERCEL_GLOBAL_CONFIG/auth.json"
+          printf '%s' '${{ secrets.VERCEL_CONFIG_JSON_B64 }}' | base64 --decode > "$VERCEL_GLOBAL_CONFIG/config.json"
+
       - name: Pull Vercel environment
-        run: npx vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest pull --yes --environment=production --global-config "$VERCEL_GLOBAL_CONFIG"
 
       - name: Build with Vercel
-        run: npx vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest build --prod --global-config "$VERCEL_GLOBAL_CONFIG"
 
       - name: Deploy to Vercel
         id: deploy
         run: |
-          npx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+          npx vercel@latest deploy --prebuilt --prod --global-config "$VERCEL_GLOBAL_CONFIG" > deployment-url.txt
           url="$(tail -n 1 deployment-url.txt)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
