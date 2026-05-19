@@ -1,6 +1,6 @@
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import AchievementList from "@/components/AchievementList";
-import PetCard from "@/components/PetCard";
+import PetCard, { ANIMATION_DURATION_MS } from "@/components/PetCard";
 import ProgressModal from "@/components/ProgressModal";
 import RewardShop from "@/components/RewardShop";
 import { dailyTasks } from "@/lib/constants";
@@ -17,9 +17,17 @@ export default function Dashboard({ data, setData }: DashboardProps) {
   const [mobilePanel, setMobilePanel] = useState<"shop" | "achievements" | "records">("shop");
   const [feedback, setFeedback] = useState("很好，今天也可以用一筆小進度開始。");
   const [achievementToast, setAchievementToast] = useState<string | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goal = data.goal;
   const percent = getProgressPercent(goal);
   const suggestedAmount = useMemo(() => getDailySuggestedAmount(goal), [goal]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimer.current) clearTimeout(animationTimer.current);
+    };
+  }, []);
 
   if (!goal) return null;
 
@@ -32,12 +40,16 @@ export default function Dashboard({ data, setData }: DashboardProps) {
     setFeedback(result.feedback);
     if (unlockedNow) setAchievementToast("成就解鎖！");
     setIsModalOpen(false);
+
+    if (animationTimer.current) clearTimeout(animationTimer.current);
+    setIsAnimating(true);
+    animationTimer.current = setTimeout(() => setIsAnimating(false), ANIMATION_DURATION_MS);
   }
 
   return (
     <section className="grid items-start gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:gap-5">
       <div className="grid content-start gap-4 lg:gap-5">
-        <PetCard data={data} feedback={feedback} onAddProgress={() => setIsModalOpen(true)} />
+        <PetCard data={data} feedback={feedback} isAnimating={isAnimating} onAddProgress={() => setIsModalOpen(true)} />
 
         <div className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
