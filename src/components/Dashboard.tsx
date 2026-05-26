@@ -68,15 +68,7 @@ export default function Dashboard({ data, setData }: DashboardProps) {
             <Metric label="完成百分比" value={`${percent}%`} className="col-span-2 sm:col-span-1" />
           </div>
 
-          <div className="mt-5">
-            <div className="mb-2 flex justify-between text-xs font-black text-ink/50">
-              <span>Progress</span>
-              <span>{percent}%</span>
-            </div>
-            <div className="h-4 overflow-hidden rounded-full bg-mint-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-mint-500 to-honey transition-all" style={{ width: `${percent}%` }} />
-            </div>
-          </div>
+
         </div>
 
         <div className="card p-4 sm:p-5">
@@ -105,10 +97,6 @@ export default function Dashboard({ data, setData }: DashboardProps) {
       </div>
 
       <div className="hidden content-start gap-4 lg:grid lg:gap-5">
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <Metric label="Coins" value={`🪙 ${data.userState.coins}`} />
-          <Metric label="Streak" value={`🔥 ${data.userState.streak} 天`} />
-        </div>
         <RewardShop data={data} setData={setData} />
         <AchievementList data={data} toast={achievementToast} onToastDone={() => setAchievementToast(null)} />
         <RecentRecords records={data.records} />
