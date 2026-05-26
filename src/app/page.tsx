@@ -68,13 +68,10 @@ export default function Home() {
             </span>
           </button>
           {data.goal ? (
-            <button
-              className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-ink shadow-card transition hover:-translate-y-0.5 focus-ring sm:px-4 sm:text-sm"
-              onClick={() => setView("dashboard")}
-              type="button"
-            >
-              Dashboard
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg bg-white px-3 py-2 text-sm font-black text-ink shadow-card">🪙 {data.userState.coins}</span>
+              <span className="rounded-lg bg-white px-3 py-2 text-sm font-black text-ink shadow-card">🔥 {data.userState.streak}</span>
+            </div>
           ) : null}
         </header>
 
