@@ -49,7 +49,10 @@ export default function GoalSetup({ onCreateGoal, onBack }: GoalSetupProps) {
             <h1 className="text-2xl font-black sm:text-3xl">建立你的存錢目標</h1>
             <p className="mt-2 text-sm font-semibold leading-6 text-ink/58">先設定一個清楚目標，Neko 會每天陪你把進度補上。</p>
           </div>
-          <div className="hidden h-16 w-16 shrink-0 place-items-center rounded-lg bg-mint-100 text-4xl sm:grid">🐣</div>
+          <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-mint-100 shadow-card sm:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt="Neko setup" className="h-full w-full object-cover" src="/cat.gif" />
+          </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:mt-7">

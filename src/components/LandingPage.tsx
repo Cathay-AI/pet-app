@@ -40,7 +40,14 @@ export default function LandingPage({ onStart }: LandingPageProps) {
                 <p className="text-sm font-bold text-ink/50">今日夥伴</p>
                 <p className="mt-1 text-xl font-black sm:text-2xl">日本旅遊基金</p>
               </div>
-              <div className="grid h-14 w-14 place-items-center rounded-lg bg-mint-100 text-3xl sm:h-16 sm:w-16 sm:text-4xl">🐱</div>
+              <div className="h-14 w-14 overflow-hidden rounded-lg bg-mint-100 shadow-card sm:h-16 sm:w-16">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img alt="Neko pixel cat" className="h-full w-full object-cover" src="/cat.gif" />
+              </div>
+            </div>
+            <div className="mt-5 overflow-hidden rounded-lg bg-gradient-to-b from-amber-50 to-amber-100 sm:mt-7">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img alt="Neko companion preview" className="h-44 w-full object-cover object-top sm:h-56" src="/cat.gif" />
             </div>
             <div className="mt-5 rounded-lg bg-mint-50 p-4 sm:mt-7">
               <div className="flex items-end justify-between gap-4">

@@ -45,7 +45,10 @@ export default function Home() {
     return (
       <main className="grid min-h-screen place-items-center px-6">
         <div className="card p-6 text-center">
-          <div className="text-5xl">🐣</div>
+          <div className="mx-auto h-16 w-16 overflow-hidden rounded-lg bg-mint-100 shadow-card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt="Neko waking up" className="h-full w-full object-cover" src="/cat.gif" />
+          </div>
           <p className="mt-3 text-sm font-semibold text-ink/70">Neko 正在醒來...</p>
         </div>
       </main>
@@ -61,7 +64,10 @@ export default function Home() {
             onClick={() => setView(data.goal ? "dashboard" : "landing")}
             type="button"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-white text-xl shadow-card">🐱</span>
+            <span className="h-10 w-10 overflow-hidden rounded-lg bg-white shadow-card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img alt="Neko" className="h-full w-full object-cover" src="/cat.gif" />
+            </span>
             <span>
               <span className="block text-lg font-black">Neko</span>
               <span className="block text-xs font-semibold text-ink/55">目標養成夥伴</span>
