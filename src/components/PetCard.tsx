@@ -1,6 +1,7 @@
 "use client";
 
-import { getPetStatus, getProgressPercent, getSelectedSkin } from "@/lib/gameLogic";
+import { getProgressPercent, getSelectedSkin } from "@/lib/gameLogic";
+import { getEmotionFilter, getEmotionLabel, type NekoEmotion } from "@/lib/nekoEmotion";
 import type { AppData } from "@/types";
 
 const GIF_SRC = "/cat.gif";
@@ -8,6 +9,7 @@ const ANIMATION_DURATION_MS = 3000;
 
 type PetCardProps = {
   data: AppData;
+  emotion: NekoEmotion;
   feedback: string;
   isAnimating: boolean;
   onAddProgress: () => void;
@@ -18,6 +20,7 @@ type PetCardProps = {
 
 export default function PetCard({
   data,
+  emotion,
   feedback,
   isAnimating,
   nextUnlockLabel,
@@ -26,9 +29,10 @@ export default function PetCard({
   suggestedAmount
 }: PetCardProps) {
   const percent = getProgressPercent(data.goal);
-  const petStatus = getPetStatus(percent);
   const skin = getSelectedSkin(data.userState);
   const roomLevel = Math.max(1, Math.min(5, Math.floor(percent / 22) + 1));
+  const emotionFilter = getEmotionFilter(emotion);
+  const isExcited = emotion === "excited" || emotion === "celebrating";
 
   return (
     <article className={`neko-shell ${isAnimating ? "room-glow" : ""}`}>
@@ -38,14 +42,15 @@ export default function PetCard({
             <StatusPill label={`小窩 Lv. ${roomLevel}`} />
             <StatusPill label={skin.name} muted />
           </div>
-          <div className="absolute right-3 top-3 z-10 rounded-lg bg-[#233038]/88 px-3 py-2 text-xs font-semibold text-white sm:right-4 sm:top-4">
-            {petStatus.tone}
+          <div className={`absolute right-3 top-3 z-10 rounded-lg px-3 py-2 text-xs font-semibold text-white sm:right-4 sm:top-4 ${emotionChipColor(emotion)}`}>
+            {getEmotionLabel(emotion)}
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt="Neko in the savings room"
-            className={`aspect-[557/313] h-full min-h-[18rem] w-full object-cover sm:min-h-[25rem] ${isAnimating ? "pet-bounce" : ""}`}
+            className={`aspect-[557/313] h-full min-h-[18rem] w-full object-cover sm:min-h-[25rem] ${isExcited || isAnimating ? "pet-bounce" : ""} emotion-transition`}
             src={GIF_SRC}
+            style={emotionFilter ? { filter: emotionFilter } : undefined}
           />
           <p aria-live="polite" className="speech-bubble">
             {feedback}
@@ -89,7 +94,7 @@ export default function PetCard({
             <div className="h-2.5 overflow-hidden rounded-full bg-[#e4dccf]">
               <div className="h-full rounded-full bg-mint-600 transition-all" style={{ width: `${percent}%` }} />
             </div>
-            <p className="mt-2 text-sm font-medium text-ink/58">{petStatus.label}</p>
+            <p className="mt-2 text-sm font-medium text-ink/58">{percent < 100 ? `還差 ${100 - percent}% 達成目標` : "目標達成！"}</p>
           </div>
         </div>
       </div>
@@ -103,6 +108,17 @@ function StatusPill({ label, muted = false }: { label: string; muted?: boolean }
       {label}
     </span>
   );
+}
+
+function emotionChipColor(emotion: NekoEmotion): string {
+  switch (emotion) {
+    case "excited":
+    case "celebrating": return "bg-[#7BC8A4]/90";
+    case "happy": return "bg-[#233038]/88";
+    case "sad": return "bg-[#8B6F5E]/88";
+    case "sleepy": return "bg-[#6B7280]/88";
+    default: return "bg-[#233038]/88";
+  }
 }
 
 export { ANIMATION_DURATION_MS };
