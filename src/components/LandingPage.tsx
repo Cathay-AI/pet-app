@@ -3,76 +3,51 @@ type LandingPageProps = {
 };
 
 const steps = [
-  { title: "設定目標", body: "輸入想完成的存錢目標與截止日期。", icon: "🎯" },
-  { title: "每天紀錄進度", body: "用小額存款或少花一筆來累積成長。", icon: "📝" },
-  { title: "解鎖寵物成長與造型", body: "完成任務拿 coins，讓 Neko 越來越有精神。", icon: "✨" }
+  { title: "設定一個目標", body: "先選一件真的想完成的事，讓它成為 Neko 的旅程。" },
+  { title: "每天一筆進度", body: "打開後只做一件事：存下今日一筆或記錄少花的一筆。" },
+  { title: "看小窩變化", body: "進度會變成房間解鎖、Neko 回饋與長期陪伴感。" }
 ];
 
 export default function LandingPage({ onStart }: LandingPageProps) {
   return (
-    <section className="overflow-hidden rounded-lg border border-white/80 bg-white/70 shadow-soft backdrop-blur">
-      <div className="grid gap-5 p-5 sm:gap-8 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
-        <div className="flex flex-col justify-center">
-          <h1 className="max-w-2xl text-3xl font-black leading-tight tracking-normal text-ink sm:text-5xl lg:text-6xl">
-            養一隻會陪你完成目標的虛擬夥伴
-          </h1>
-          <p className="mt-4 max-w-xl text-base font-medium leading-7 text-ink/68 sm:mt-5 sm:text-lg sm:leading-8">
-            設定存錢目標、完成每日任務、讓寵物成長並解鎖獎勵
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
-            <button
-              className="rounded-lg bg-mint-600 px-6 py-3 text-base font-black text-white shadow-card transition hover:-translate-y-0.5 hover:bg-mint-500 focus-ring"
-              onClick={onStart}
-              type="button"
-            >
-              開始設定目標
-            </button>
-            <div className="hidden rounded-lg bg-white px-4 py-3 text-sm font-bold text-ink/65 shadow-card sm:block">
-              MVP：單一存錢目標 · localStorage
-            </div>
-          </div>
+    <section className="neko-shell">
+      <div className="grid gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="relative overflow-hidden rounded-lg bg-[#e4d1ae]">
+          <div className="absolute left-4 top-4 z-10 rounded-lg bg-white px-3 py-2 text-xs font-bold text-mint-600 shadow-card">Neko</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="Neko room preview" className="aspect-[557/313] min-h-[18rem] w-full object-cover sm:min-h-[25rem]" src="/cat.gif" />
+          <p className="speech-bubble">Neko 會把你的真實進度，變成每天想回來看的小窩變化。</p>
         </div>
 
-        <div className="relative">
-          <div className="card p-4 sm:p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-ink/50">今日夥伴</p>
-                <p className="mt-1 text-xl font-black sm:text-2xl">日本旅遊基金</p>
-              </div>
-              <div className="grid h-14 w-14 place-items-center rounded-lg bg-mint-100 text-3xl sm:h-16 sm:w-16 sm:text-4xl">🐱</div>
-            </div>
-            <div className="mt-5 rounded-lg bg-mint-50 p-4 sm:mt-7">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold text-ink/55">目前進度</p>
-                  <p className="mt-1 text-2xl font-black sm:text-3xl">42%</p>
-                </div>
-                <p className="rounded-lg bg-white px-3 py-2 text-sm font-black text-mint-600 shadow-card">🪙 120</p>
-              </div>
-              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
-                <div className="h-full w-[42%] rounded-full bg-mint-500" />
-              </div>
-            </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-3 sm:gap-3">
-              {["今天存下 300 元", "少買一杯飲料", "記錄一筆消費"].map((task) => (
-                <div key={task} className="rounded-lg bg-white p-3 text-sm font-bold text-ink/70 shadow-card">
-                  {task}
-                </div>
-              ))}
-            </div>
+        <div className="flex flex-col justify-between gap-5 rounded-lg bg-[#fffaf0] p-4 sm:p-5">
+          <div>
+            <p className="text-sm font-bold text-mint-600">人生目標養成遊戲</p>
+            <h1 className="mt-2 text-3xl font-black leading-tight text-ink sm:text-4xl">每天照顧 Neko，一起完成目標</h1>
+            <p className="mt-3 text-sm font-medium leading-6 text-ink/66">
+              不是管理一堆 dashboard。你只需要完成今天的一個行動，Neko 的狀態和房間就會慢慢改變。
+            </p>
           </div>
+
+          <div className="rounded-lg border border-[#e8dcc6] bg-white p-4">
+            <p className="text-xs font-semibold text-ink/45">今日核心循環</p>
+            <p className="mt-2 text-lg font-bold text-ink">存下今日一筆 → Neko 回應 → 小窩前進</p>
+          </div>
+
+          <button
+            className="rounded-lg bg-ink px-5 py-4 text-base font-bold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-ink/92 focus-ring"
+            onClick={onStart}
+            type="button"
+          >
+            建立我的目標
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-2 border-t border-white/80 bg-white/55 p-4 sm:grid-cols-3 sm:gap-3 sm:p-6">
+      <div className="grid gap-3 border-t border-[#eadfcd] bg-[#fffaf0] p-4 sm:grid-cols-3 sm:p-5">
         {steps.map((step, index) => (
-          <article className="rounded-lg bg-white p-3 shadow-card sm:p-4" key={step.title}>
-            <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-lg bg-honey/20 text-lg sm:h-10 sm:w-10 sm:text-xl">{step.icon}</span>
-              <span className="text-xs font-black text-mint-600">STEP {index + 1}</span>
-            </div>
-            <h2 className="mt-3 text-base font-black sm:mt-4 sm:text-lg">{step.title}</h2>
+          <article className="rounded-lg border border-[#eadfcd] bg-white p-4" key={step.title}>
+            <p className="text-xs font-semibold text-mint-600">STEP {index + 1}</p>
+            <h2 className="mt-3 text-base font-bold">{step.title}</h2>
             <p className="mt-2 text-sm font-medium leading-6 text-ink/60">{step.body}</p>
           </article>
         ))}
