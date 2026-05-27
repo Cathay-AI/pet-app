@@ -44,8 +44,8 @@ export default function Home() {
   if (!isReady) {
     return (
       <main className="grid min-h-screen place-items-center px-6">
-        <div className="card p-6 text-center">
-          <div className="text-5xl">🐣</div>
+        <div className="quiet-panel p-6 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-mint-600 text-base font-black text-white">N</div>
           <p className="mt-3 text-sm font-semibold text-ink/70">Neko 正在醒來...</p>
         </div>
       </main>
@@ -61,7 +61,7 @@ export default function Home() {
             onClick={() => setView(data.goal ? "dashboard" : "landing")}
             type="button"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-white text-xl shadow-card">🐱</span>
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-mint-600 text-sm font-black text-white shadow-card">N</span>
             <span>
               <span className="block text-lg font-black">Neko</span>
               <span className="block text-xs font-semibold text-ink/55">目標養成夥伴</span>
@@ -69,8 +69,8 @@ export default function Home() {
           </button>
           {data.goal ? (
             <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-white px-3 py-2 text-sm font-black text-ink shadow-card">🪙 {data.userState.coins}</span>
-              <span className="rounded-lg bg-white px-3 py-2 text-sm font-black text-ink shadow-card">🔥 {data.userState.streak}</span>
+              <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-ink shadow-card">{data.userState.coins} coins</span>
+              <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-ink shadow-card">{data.userState.streak} days</span>
             </div>
           ) : null}
         </header>
