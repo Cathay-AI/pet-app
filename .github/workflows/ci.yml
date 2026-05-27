@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - main
+      - core-experience-redesign
+      - "claude/**"
   pull_request:
     branches:
       - main
+      - core-experience-redesign
 
 permissions:
   contents: read
