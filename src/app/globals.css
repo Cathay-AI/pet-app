@@ -19,10 +19,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(255, 226, 189, 0.58), transparent 28rem),
-    radial-gradient(circle at top right, rgba(193, 235, 255, 0.62), transparent 30rem),
-    linear-gradient(180deg, #f7fffb 0%, #edf8f2 48%, #fff4ea 100%);
+  background: #f6efe3;
   color: var(--foreground);
 }
 
@@ -33,12 +30,32 @@ textarea {
   font: inherit;
 }
 
-button {
+button:not(:disabled) {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 .card {
-  @apply rounded-lg border border-white/70 bg-white/80 shadow-card backdrop-blur;
+  @apply rounded-lg border border-[#eadfcd] bg-white shadow-card;
+}
+
+.quiet-panel {
+  @apply rounded-lg border border-[#eadfcd] bg-[#fffaf0] shadow-card;
+}
+
+.neko-shell {
+  @apply overflow-hidden rounded-lg border border-[#eadfcd] bg-[#fffaf0] shadow-soft;
+}
+
+.ritual-strip {
+  @apply flex flex-col gap-3 rounded-lg border border-[#eadfcd] bg-[#fffaf0] p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5;
+}
+
+.speech-bubble {
+  @apply absolute bottom-4 left-4 right-4 rounded-lg bg-white/95 px-4 py-3 text-sm font-semibold leading-6 text-ink shadow-card sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-[22rem];
 }
 
 .focus-ring {
@@ -66,10 +83,10 @@ button {
 @keyframes pet-bounce {
   0%,
   100% {
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateY(0) scale(1);
   }
   45% {
-    transform: translateX(-50%) translateY(-10px) scale(1.03);
+    transform: translateY(-6px) scale(1.01);
   }
 }
 
