@@ -1,10 +1,14 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AchievementList from "@/components/AchievementList";
+import CelebrationOverlay from "@/components/CelebrationOverlay";
 import PetCard, { ANIMATION_DURATION_MS } from "@/components/PetCard";
 import ProgressModal from "@/components/ProgressModal";
 import RewardShop from "@/components/RewardShop";
 import { applyProgressRecord, formatCurrency, getDailySuggestedAmount, getProgressPercent } from "@/lib/gameLogic";
+import { getEmotionSpeech, getNekoEmotion } from "@/lib/nekoEmotion";
 import type { AppData, ProgressRecord } from "@/types";
+
+const JUST_RECORDED_MS = 2 * 60 * 1000;
 
 type DashboardProps = {
   data: AppData;
@@ -14,32 +18,57 @@ type DashboardProps = {
 export default function Dashboard({ data, setData }: DashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [explorePanel, setExplorePanel] = useState<SecondaryPanel | null>(null);
-  const [feedback, setFeedback] = useState("Neko 在等你今天的一筆小進度。");
+  const [justRecorded, setJustRecorded] = useState(false);
+  const [celebratingMilestone, setCelebratingMilestone] = useState<string | null>(null);
   const [achievementToast, setAchievementToast] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recordedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const goal = data.goal;
   const percent = getProgressPercent(goal);
   const suggestedAmount = useMemo(() => getDailySuggestedAmount(goal), [goal]);
   const nextUnlock = getNextRoomUnlock(goal?.currentAmount ?? 0, goal?.targetAmount ?? 0);
 
+  const emotion = celebratingMilestone
+    ? "celebrating"
+    : getNekoEmotion(data.userState.lastRecordDate ?? null, data.userState.streak, justRecorded);
+
+  const [feedback, setFeedback] = useState(() =>
+    getEmotionSpeech(getNekoEmotion(data.userState.lastRecordDate ?? null, data.userState.streak, false))
+  );
+
   useEffect(() => {
     return () => {
       if (animationTimer.current) clearTimeout(animationTimer.current);
+      if (recordedTimer.current) clearTimeout(recordedTimer.current);
     };
   }, []);
+
+  const handleCelebrationDone = useCallback(() => setCelebratingMilestone(null), []);
 
   if (!goal) return null;
 
   function handleAddRecord(record: ProgressRecord) {
+    const previousPercent = getProgressPercent(data.goal);
     const previousAchievements = new Set(data.userState.unlockedAchievementIds);
     const result = applyProgressRecord(data, record);
+    const newPercent = getProgressPercent(result.data.goal);
     const unlockedNow = result.data.userState.unlockedAchievementIds.find((id) => !previousAchievements.has(id));
 
     setData(result.data);
     setFeedback(result.feedback);
     if (unlockedNow) setAchievementToast("成就解鎖！");
     setIsModalOpen(false);
+
+    // Emotion: excited for 2 minutes
+    setJustRecorded(true);
+    if (recordedTimer.current) clearTimeout(recordedTimer.current);
+    recordedTimer.current = setTimeout(() => setJustRecorded(false), JUST_RECORDED_MS);
+
+    // Milestone celebration
+    const crossed = roomMilestones.find((m) => previousPercent < m.percent && newPercent >= m.percent);
+    if (crossed) setCelebratingMilestone(crossed.label);
 
     if (animationTimer.current) clearTimeout(animationTimer.current);
     setIsAnimating(true);
@@ -48,8 +77,13 @@ export default function Dashboard({ data, setData }: DashboardProps) {
 
   return (
     <section className="grid gap-4 sm:gap-5">
+      {celebratingMilestone ? (
+        <CelebrationOverlay milestone={celebratingMilestone} onDone={handleCelebrationDone} />
+      ) : null}
+
       <PetCard
         data={data}
+        emotion={emotion}
         feedback={feedback}
         isAnimating={isAnimating}
         nextUnlockLabel={nextUnlock.label}
