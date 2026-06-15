@@ -49,8 +49,8 @@ export default function LeaderboardPage() {
         <header className="mb-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-[#8B6F5E]">公開健康分 · 每 5 分鐘更新</p>
-              <h1 className="text-3xl font-black">本週健康排行</h1>
+              <p className="text-sm font-black text-[#8B6F5E]">公開狀態 · 每 5 分鐘更新</p>
+              <h1 className="text-3xl font-black">照顧近況</h1>
             </div>
             <AuthStatus auth={auth} />
           </div>
@@ -59,11 +59,19 @@ export default function LeaderboardPage() {
         <section className="overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-white shadow-[6px_6px_0_#3D2B1F]">
           {rankedRows.map((entry, index) => {
             const score = healthScore(entry);
+            const weakest = weakestCare(entry);
             return (
               <div
                 key={entry.id}
+                role={entry.isSelf ? "button" : undefined}
+                tabIndex={entry.isSelf ? 0 : undefined}
+                onClick={entry.isSelf ? () => router.push("/home") : undefined}
+                onKeyDown={(event) => {
+                  if (!entry.isSelf) return;
+                  if (event.key === "Enter" || event.key === " ") router.push("/home");
+                }}
                 className={`grid grid-cols-[3rem_3.75rem_1fr_3.25rem] items-center gap-2 border-b-4 border-[#F5E6C8] p-3 last:border-b-0 ${
-                  entry.isSelf ? "bg-[#F5E6C8]" : "bg-white"
+                  entry.isSelf ? "cursor-pointer bg-[#F5E6C8] outline-none focus:bg-[#FFE0DA]" : "bg-white"
                 }`}
               >
                 <div className="text-center">
@@ -85,6 +93,9 @@ export default function LeaderboardPage() {
                   <p className="truncate text-xs font-bold text-[#8B6F5E]">
                     {entry.petName} · {entry.petType === "cat" ? "貓" : "狗"} · {formatRelativeTime(entry.lastCareAt)}
                   </p>
+                  <p className={`mt-1 truncate text-xs font-black ${weakest.value < 40 ? "text-[#E24B4A]" : "text-[#8B6F5E]"}`}>
+                    {entry.isSelf ? "現在最需要" : "目前最弱"}：{weakest.label} {weakest.value}%
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className={`text-2xl font-black ${score < 40 ? "text-[#E24B4A]" : "text-[#3D2B1F]"}`}>{score}</p>
@@ -105,4 +116,13 @@ function rankLabel(rank: number) {
   if (rank === 2) return "2nd";
   if (rank === 3) return "3rd";
   return `${rank}th`;
+}
+
+function weakestCare(entry: LeaderboardEntry) {
+  const stats = [
+    { label: "飽足", value: entry.hunger },
+    { label: "清潔", value: entry.cleanliness },
+    { label: "心情", value: entry.mood }
+  ];
+  return stats.sort((a, b) => a.value - b.value)[0];
 }
