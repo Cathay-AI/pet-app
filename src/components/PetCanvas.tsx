@@ -73,6 +73,7 @@ function drawPet(ctx: CanvasRenderingContext2D, options: DrawOptions) {
   const palette = PET_COLORS[options.color];
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
+  const visualAnimation = options.animation === "walking" ? "idle" : options.animation;
   const bob = getBob(options.animation, options.frame);
   const isSick = options.animation === "sick";
   const isSad = options.animation === "sad";
@@ -80,9 +81,9 @@ function drawPet(ctx: CanvasRenderingContext2D, options: DrawOptions) {
   if (isSick) {
     drawSickPet(ctx, options, palette);
   } else if (options.type === "cat") {
-    drawCat(ctx, palette, bob, isSad, options.animation, options.frame);
+    drawCat(ctx, palette, bob, isSad, visualAnimation, options.frame);
   } else {
-    drawDog(ctx, palette, bob, isSad, options.animation, options.frame);
+    drawDog(ctx, palette, bob, isSad, visualAnimation, options.frame);
   }
 
   if (!isSick && options.cleanliness < 50) drawDust(ctx, options.frame);
@@ -96,6 +97,7 @@ function drawPet(ctx: CanvasRenderingContext2D, options: DrawOptions) {
 
 function getBob(animation: PetAnimation, frame: number) {
   if (animation === "happy") return frame % 8 < 4 ? -3 : 1;
+  if (animation === "walking") return 0;
   if (animation === "eating") return frame % 4 < 2 ? 1 : 0;
   if (animation === "bathing") return frame % 4 < 2 ? -1 : 1;
   if (animation === "sad") return frame % 8 === 0 ? 1 : 0;
