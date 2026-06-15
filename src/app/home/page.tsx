@@ -300,7 +300,7 @@ export default function HomePage() {
           </button>
           {feedLeft > 0 ? (
             <p className="rounded bg-[#F5E6C8] px-3 py-2 text-xs font-black leading-tight text-[#8B6F5E]">
-              {pet.name} 還在慢慢吃，{formatCooldown(feedLeft)}後再餵會剛好。
+              {pet.name} 還在慢慢吃，晚點再餵就好。
             </p>
           ) : null}
           <StatusBar label="飽足" value={pet.hunger} color={pet.hunger < 30 ? "coral" : "mint"} />
@@ -493,7 +493,7 @@ function getRecommendedAction(
 
 function getFeedBlockedReason(pet: Pet, feedLeft: number) {
   if (pet.isSick) return `${pet.name} 先治療，再慢慢吃東西。`;
-  if (feedLeft > 0) return `${pet.name} 還在慢慢吃，${formatCooldown(feedLeft)}後再餵。`;
+  if (feedLeft > 0) return `${pet.name} 還在慢慢吃，晚點再餵就好。`;
   if (pet.hunger >= FEED_FULL_THRESHOLD) return `${pet.name} 現在還不餓，晚點再餵牠。`;
   return "";
 }
