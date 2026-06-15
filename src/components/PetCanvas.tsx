@@ -225,9 +225,9 @@ function drawHungerMark(ctx: CanvasRenderingContext2D, frame: number) {
 
 function drawSmellLines(ctx: CanvasRenderingContext2D, frame: number) {
   const y = frame % 2;
-  px(ctx, 25, 4 + y, 1, 6, "#82D8A8");
-  px(ctx, 28, 6 - y, 1, 6, "#82D8A8");
-  px(ctx, 22, 6 - y, 1, 5, "#82D8A8");
+  px(ctx, 25, 4 + y, 1, 6, "#BCA894");
+  px(ctx, 28, 6 - y, 1, 6, "#BCA894");
+  px(ctx, 22, 6 - y, 1, 5, "#BCA894");
 }
 
 function drawBubbles(ctx: CanvasRenderingContext2D, frame: number) {

@@ -11,6 +11,7 @@ export default function DirtyRoomSignal({ veryDirty = false }: DirtyRoomSignalPr
       <span className="dirty-room-signal-pile dirty-room-signal-pile-top" />
       <span className="dirty-room-signal-pile dirty-room-signal-pile-mid" />
       <span className="dirty-room-signal-pile dirty-room-signal-pile-base" />
+      <span className="dirty-room-signal-pile-shine" />
       <span className="dirty-room-signal-dirt dirty-room-signal-dirt-1" />
       <span className="dirty-room-signal-dirt dirty-room-signal-dirt-2" />
       <span className="dirty-room-signal-dirt dirty-room-signal-dirt-3" />

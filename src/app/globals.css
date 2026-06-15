@@ -349,11 +349,11 @@ button:disabled {
 
 .poop-cleanup-smell {
   animation: poop-smell 1.2s steps(4, end) infinite;
-  background: #82d8a8;
-  height: 18px;
+  background: #bca894;
+  height: 16px;
   position: absolute;
-  top: -1.2rem;
-  width: 4px;
+  top: -1.05rem;
+  width: 3px;
 }
 
 .poop-cleanup-smell-1 {
@@ -363,7 +363,7 @@ button:disabled {
 .poop-cleanup-smell-2 {
   animation-delay: 140ms;
   left: 1.8rem;
-  top: -1.55rem;
+  top: -1.35rem;
 }
 
 .poop-cleanup-smell-3 {
@@ -384,13 +384,13 @@ button:disabled {
 }
 
 .dirty-room-signal {
-  bottom: 3.4rem;
-  height: 7rem;
+  bottom: 3.55rem;
+  height: 6.4rem;
   image-rendering: pixelated;
-  left: clamp(3rem, 18%, 5rem);
+  left: clamp(3rem, 17%, 4.7rem);
   pointer-events: none;
   position: absolute;
-  width: 8rem;
+  width: 7rem;
   z-index: 18;
 }
 
@@ -400,57 +400,65 @@ button:disabled {
 
 .dirty-room-signal-stink {
   animation: poop-smell 1.15s steps(4, end) infinite;
-  background: #82d8a8;
-  width: 5px;
+  background: #bca894;
+  width: 4px;
 }
 
 .dirty-room-signal-stink-1 {
-  bottom: 2.8rem;
-  height: 2.75rem;
-  left: 0.9rem;
+  bottom: 2.45rem;
+  height: 2.35rem;
+  left: 0.95rem;
 }
 
 .dirty-room-signal-stink-2 {
   animation-delay: 130ms;
-  bottom: 3.2rem;
-  height: 3.3rem;
-  left: 2.5rem;
+  bottom: 2.9rem;
+  height: 2.85rem;
+  left: 2.25rem;
 }
 
 .dirty-room-signal-stink-3 {
   animation-delay: 260ms;
-  bottom: 2.7rem;
-  height: 2.6rem;
-  left: 4.2rem;
+  bottom: 2.35rem;
+  height: 2.2rem;
+  left: 3.65rem;
 }
 
 .dirty-room-signal-pile {
-  box-shadow: 3px 3px 0 #0e0e1e;
+  box-shadow: 2px 2px 0 #0e0e1e;
 }
 
 .dirty-room-signal-pile-top {
-  background: #5e3a26;
-  bottom: 2.7rem;
-  height: 0.75rem;
-  left: 2.1rem;
-  width: 0.9rem;
+  background: #7a4b31;
+  bottom: 2.35rem;
+  height: 0.65rem;
+  left: 2.05rem;
+  width: 0.75rem;
 }
 
 .dirty-room-signal-pile-mid {
-  background: #6f452d;
-  bottom: 2.05rem;
-  height: 1rem;
-  left: 1.45rem;
-  width: 2.5rem;
+  background: #8a5839;
+  bottom: 1.78rem;
+  height: 0.82rem;
+  left: 1.35rem;
+  width: 2.3rem;
 }
 
 .dirty-room-signal-pile-base {
-  background: #8b5a3c;
-  border: 3px solid #0e0e1e;
-  bottom: 1.15rem;
-  height: 1.3rem;
-  left: 0.7rem;
-  width: 4.5rem;
+  background: #9a6844;
+  border: 2px solid #0e0e1e;
+  bottom: 1.05rem;
+  height: 1.05rem;
+  left: 0.65rem;
+  width: 3.85rem;
+}
+
+.dirty-room-signal-pile-shine {
+  background: #c08a5d;
+  bottom: 1.75rem;
+  height: 0.25rem;
+  left: 1.2rem;
+  width: 1rem;
 }
 
 .dirty-room-signal-dirt {
@@ -459,37 +467,37 @@ button:disabled {
 
 .dirty-room-signal-dirt-1 {
   bottom: 0.9rem;
-  height: 0.5rem;
+  height: 0.4rem;
   left: 0;
-  width: 1.1rem;
+  width: 0.95rem;
 }
 
 .dirty-room-signal-dirt-2 {
   bottom: 0.4rem;
-  height: 0.45rem;
-  left: 3.8rem;
-  width: 1rem;
+  height: 0.35rem;
+  left: 3.35rem;
+  width: 0.9rem;
 }
 
 .dirty-room-signal-dirt-3 {
   bottom: 1.25rem;
-  height: 0.55rem;
-  left: 5.6rem;
-  width: 0.7rem;
+  height: 0.45rem;
+  left: 5rem;
+  width: 0.6rem;
 }
 
 .dirty-room-signal-dirt-4 {
   bottom: 0.2rem;
-  height: 0.45rem;
-  left: 6.5rem;
-  width: 1.2rem;
+  height: 0.35rem;
+  left: 5.7rem;
+  width: 1rem;
 }
 
 .dirty-room-signal-dirt-5 {
-  bottom: 2.6rem;
-  height: 0.7rem;
-  left: 5.1rem;
-  width: 0.7rem;
+  bottom: 2.25rem;
+  height: 0.55rem;
+  left: 4.6rem;
+  width: 0.6rem;
 }
 
 .pet-walk-area {

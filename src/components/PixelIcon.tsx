@@ -13,8 +13,10 @@ const colors: Record<string, string> = {
   k: "#3D2B1F",
   l: "#D8F1FF",
   m: "#D4A96A",
+  o: "#9A6844",
   p: "#7F77DD",
   r: "#E24B4A",
+  s: "#C08A5D",
   w: "#FDF8F0",
   y: "#F7D46A"
 };
@@ -41,13 +43,13 @@ const pixels: Record<PixelIconName, string[]> = {
     "........"
   ],
   poop: [
-    "...d....",
-    "..ddd...",
-    ".ddddd..",
-    "..ddd...",
-    ".ddddd..",
-    "ddddddd.",
-    ".kkkkk..",
+    "........",
+    "...o....",
+    "..ooo...",
+    ".oosoo..",
+    "..oooo..",
+    ".oooooo.",
+    "..kkkk..",
     "........"
   ],
   play: [
