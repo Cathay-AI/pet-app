@@ -92,6 +92,7 @@ export default function HomePage() {
   const baseAnimation = getPetMoodState(pet);
   const animation = actionAnimation ?? baseAnimation;
   const petCanWalk = !actionAnimation && !pet.isSick && animation !== "sleeping";
+  const canvasAnimation: PetAnimation = petCanWalk ? "walking" : animation;
   const bathLeft = remainingCooldown(pet.lastBathAt, BATH_COOLDOWN_MS, now);
   const feedLeft = remainingCooldown(pet.lastFedAt, FEED_COOLDOWN_MS, now);
   const playLeft = remainingCooldown(pet.lastPlayAt, PLAY_COOLDOWN_MS, now);
@@ -260,7 +261,7 @@ export default function HomePage() {
                 <PetCanvas
                   type={pet.type}
                   color={pet.color}
-                  animation={animation}
+                  animation={canvasAnimation}
                   hunger={pet.hunger}
                   cleanliness={pet.cleanliness}
                   size={160}

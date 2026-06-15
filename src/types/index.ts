@@ -7,7 +7,8 @@ export type PetAnimation =
   | "eating"
   | "bathing"
   | "sick"
-  | "sleeping";
+  | "sleeping"
+  | "walking";
 
 export type PetColorId = "orange" | "brown" | "gray" | "blue" | "mint" | "lavender";
 
