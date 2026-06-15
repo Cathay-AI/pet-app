@@ -6,7 +6,7 @@ create table if not exists public.profiles (
 
 create table if not exists public.pets (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references public.profiles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   name text not null check (char_length(name) between 1 and 24),
   type text not null check (type in ('cat', 'dog')),
   color text not null check (color in ('orange', 'brown', 'gray', 'blue', 'mint', 'lavender')),

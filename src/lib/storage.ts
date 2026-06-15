@@ -1,6 +1,6 @@
 import { initialNekoData } from "@/lib/constants";
-import { decayPet } from "@/lib/gameLogic";
-import type { NekoData, Pet, User } from "@/types";
+import { normalizeNekoData } from "@/lib/petCollection";
+import type { NekoData } from "@/types";
 
 const STORAGE_KEY = "neko-virtual-pet-data";
 
@@ -11,13 +11,10 @@ export function loadNekoData(): NekoData {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return initialNekoData;
     const parsed = JSON.parse(raw) as Partial<NekoData>;
-    if (!parsed.user || !parsed.pet) return initialNekoData;
+    const normalized = normalizeNekoData(parsed);
+    if (!normalized.user || !normalized.pet) return initialNekoData;
 
-    return {
-      version: 1,
-      user: parsed.user as User,
-      pet: decayPet(parsed.pet as Pet)
-    };
+    return normalized;
   } catch {
     return initialNekoData;
   }
@@ -25,7 +22,7 @@ export function loadNekoData(): NekoData {
 
 export function saveNekoData(data: NekoData) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, version: 1 }));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeNekoData(data)));
 }
 
 export function clearNekoData() {

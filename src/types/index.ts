@@ -50,6 +50,8 @@ export type Pet = {
 export type NekoData = {
   version: 1;
   user: User | null;
+  pets: Pet[];
+  activePetId: string | null;
   pet: Pet | null;
 };
 

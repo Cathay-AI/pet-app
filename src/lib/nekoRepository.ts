@@ -1,8 +1,8 @@
 "use client";
 
 import { FAKE_LEADERBOARD, initialNekoData } from "@/lib/constants";
-import { decayPet } from "@/lib/gameLogic";
 import { loadNekoData, saveNekoData } from "@/lib/storage";
+import { normalizeNekoData } from "@/lib/petCollection";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { LeaderboardEntry, NekoData, Pet, PetColorId, PetType, User } from "@/types";
 
@@ -77,71 +77,80 @@ export async function loadCurrentNekoData(): Promise<{ data: NekoData; auth: Aut
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return { data: loadNekoData(), auth, source: "local" };
 
-  const [{ data: profile }, { data: pet }] = await Promise.all([
+  const [{ data: profile }, { data: pets }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", auth.userId).maybeSingle<DbProfile>(),
-    supabase.from("pets").select("*").eq("user_id", auth.userId).maybeSingle<DbPet>()
+    supabase.from("pets").select("*").eq("user_id", auth.userId).order("updated_at", { ascending: false }).returns<DbPet[]>()
   ]);
 
-  if (!profile || !pet) return { data: initialNekoData, auth, source: "supabase" };
+  if (!profile || !pets?.length) return { data: initialNekoData, auth, source: "supabase" };
+
+  const localData = loadNekoData();
+  const mappedPets = pets.map(mapPet);
+  const localActiveId = mappedPets.some((pet) => pet.id === localData.activePetId) ? localData.activePetId : null;
+  const activePetId = localActiveId ?? mappedPets[0]?.id ?? null;
 
   return {
-    data: {
+    data: normalizeNekoData({
       version: 1,
       user: mapProfile(profile),
-      pet: decayPet(mapPet(pet))
-    },
+      pets: mappedPets,
+      activePetId,
+      pet: mappedPets.find((pet) => pet.id === activePetId) ?? mappedPets[0] ?? null
+    }),
     auth,
     source: "supabase"
   };
 }
 
 export async function saveCurrentNekoData(data: NekoData) {
+  const normalized = normalizeNekoData(data);
   const auth = await getAuthState();
-  if (!auth.isConfigured || !auth.userId || !data.user || !data.pet) {
-    saveNekoData(data);
+  if (!auth.isConfigured || !auth.userId || !normalized.user || !normalized.pet) {
+    saveNekoData(normalized);
     return "local" as const;
   }
 
   const supabase = getSupabaseBrowserClient();
   if (!supabase) {
-    saveNekoData(data);
+    saveNekoData(normalized);
     return "local" as const;
   }
 
   const profile = {
     id: auth.userId,
-    username: data.user.username,
-    created_at: data.user.createdAt
+    username: normalized.user.username,
+    created_at: normalized.user.createdAt
   };
-  const pet = {
-    id: data.pet.id,
+  const pets = normalized.pets.map((pet) => ({
+    id: pet.id,
     user_id: auth.userId,
-    name: data.pet.name,
-    type: data.pet.type,
-    color: data.pet.color,
-    hunger: data.pet.hunger,
-    cleanliness: data.pet.cleanliness,
-    mood: data.pet.mood,
-    is_sick: data.pet.isSick,
-    zero_since_at: data.pet.zeroSinceAt,
-    last_fed_at: data.pet.lastFedAt,
-    last_bath_at: data.pet.lastBathAt,
-    last_play_at: data.pet.lastPlayAt,
-    updated_at: data.pet.updatedAt
-  };
+    name: pet.name,
+    type: pet.type,
+    color: pet.color,
+    hunger: pet.hunger,
+    cleanliness: pet.cleanliness,
+    mood: pet.mood,
+    is_sick: pet.isSick,
+    zero_since_at: pet.zeroSinceAt,
+    last_fed_at: pet.lastFedAt,
+    last_bath_at: pet.lastBathAt,
+    last_play_at: pet.lastPlayAt,
+    updated_at: pet.updatedAt
+  }));
 
   const { error: profileError } = await supabase.from("profiles").upsert(profile);
   if (profileError) {
-    saveNekoData(data);
+    saveNekoData(normalized);
     return "local" as const;
   }
 
-  const { error: petError } = await supabase.from("pets").upsert(pet);
+  const { error: petError } = await supabase.from("pets").upsert(pets);
   if (petError) {
-    saveNekoData(data);
+    saveNekoData(normalized);
     return "local" as const;
   }
 
+  saveNekoData(normalized);
   return "supabase" as const;
 }
 

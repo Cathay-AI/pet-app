@@ -24,6 +24,7 @@ import {
   remainingCooldown
 } from "@/lib/gameLogic";
 import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
+import { setActivePet, upsertPet } from "@/lib/petCollection";
 import type { Food, NekoData, Pet, PetAnimation, PixelIconName } from "@/types";
 
 export default function HomePage() {
@@ -31,6 +32,7 @@ export default function HomePage() {
   const [data, setData] = useState<NekoData | null>(null);
   const [actionAnimation, setActionAnimation] = useState<PetAnimation | null>(null);
   const [showFood, setShowFood] = useState(false);
+  const [showPetSwitcher, setShowPetSwitcher] = useState(false);
   const [flyingFood, setFlyingFood] = useState<PixelIconName | null>(null);
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(() => new Date());
@@ -69,7 +71,8 @@ export default function HomePage() {
     setNow(new Date());
     setData((current) => {
       if (!current?.pet || !current.user) return current;
-      const next = { ...current, pet: updater(current.pet) };
+      const updatedPet = updater(current.pet);
+      const next = upsertPet({ ...current, pet: updatedPet, activePetId: updatedPet.id }, updatedPet);
       void saveCurrentNekoData(next);
       return next;
     });
@@ -78,6 +81,19 @@ export default function HomePage() {
       setActionAnimation(nextAnimation);
       window.setTimeout(() => setActionAnimation(null), 1300);
     }
+  }
+
+  function switchPet(petId: string) {
+    setData((current) => {
+      if (!current?.user || !current.pet) return current;
+      const next = setActivePet(current, petId);
+      if (next.pet) setMessage(`${next.pet.name} 跑進房間了`);
+      void saveCurrentNekoData(next);
+      return next;
+    });
+    setActionAnimation(null);
+    setShowFood(false);
+    setShowPetSwitcher(false);
   }
 
   if (!data?.user || !data.pet) {
@@ -89,6 +105,7 @@ export default function HomePage() {
   }
 
   const pet = data.pet;
+  const petCollection = data.pets.length ? data.pets : [pet];
   const baseAnimation = getPetMoodState(pet);
   const animation = actionAnimation ?? baseAnimation;
   const petCanWalk = !actionAnimation && !pet.isSick && animation !== "sleeping";
@@ -228,11 +245,70 @@ export default function HomePage() {
             <p className="text-sm font-black text-[#8B6F5E]">{data.user.username} 的 Neko</p>
             <h1 className="text-2xl font-black">{pet.name}</h1>
           </div>
-          <div className="rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-3 py-2 text-right shadow-[3px_3px_0_#3D2B1F]">
-            <p className="text-[11px] font-black text-[#8B6F5E]">健康分</p>
-            <p className="text-xl font-black">{healthScore(pet)}</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPetSwitcher((value) => !value)}
+              className="rounded-md border-4 border-[#3D2B1F] bg-white px-3 py-2 text-left shadow-[3px_3px_0_#3D2B1F] active:translate-y-1"
+              aria-expanded={showPetSwitcher}
+            >
+              <span className="block text-[11px] font-black text-[#8B6F5E]">寵物匣</span>
+              <span className="block text-base font-black">{petCollection.length} 位</span>
+            </button>
+            <div className="rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-3 py-2 text-right shadow-[3px_3px_0_#3D2B1F]">
+              <p className="text-[11px] font-black text-[#8B6F5E]">健康分</p>
+              <p className="text-xl font-black">{healthScore(pet)}</p>
+            </div>
           </div>
         </header>
+
+        {showPetSwitcher ? (
+          <section className="mb-5 rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] p-3 shadow-[5px_5px_0_#3D2B1F]">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-[#8B6F5E]">今天誰陪你？</p>
+                <p className="text-lg font-black">寵物匣</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/gacha")}
+                className="rounded-md border-2 border-[#3D2B1F] bg-[#E8734A] px-3 py-2 text-xs font-black text-white shadow-[2px_2px_0_#3D2B1F] active:translate-y-1"
+              >
+                再抽一位
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {petCollection.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => switchPet(candidate.id)}
+                  className={`grid grid-cols-[3.5rem_1fr] items-center gap-2 rounded-md border-2 p-2 text-left shadow-[2px_2px_0_#3D2B1F] active:translate-y-1 ${
+                    candidate.id === pet.id ? "border-[#E8734A] bg-[#FFE0DA]" : "border-[#3D2B1F] bg-[#FDF8F0]"
+                  }`}
+                >
+                  <span className="grid h-14 w-14 place-items-center rounded bg-[#1A1A2E]">
+                    <PetCanvas
+                      type={candidate.type}
+                      color={candidate.color}
+                      animation={candidate.id === pet.id ? "happy" : "idle"}
+                      hunger={candidate.hunger}
+                      cleanliness={candidate.cleanliness}
+                      size={52}
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black">{candidate.name}</span>
+                    <span className="block text-[11px] font-bold text-[#8B6F5E]">
+                      {candidate.type === "cat" ? "貓" : "狗"} · 健康 {healthScore(candidate)}
+                    </span>
+                    {candidate.id === pet.id ? <span className="block text-[11px] font-black text-[#E8734A]">在房間裡</span> : null}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="relative overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-[#1A1A2E] p-5 shadow-[6px_6px_0_#3D2B1F]">
           <PixelRoom cleanliness={pet.cleanliness} hunger={pet.hunger} mood={pet.mood} />

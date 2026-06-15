@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
 import { decayPet, formatRelativeTime, healthScore } from "@/lib/gameLogic";
 import { loadCurrentNekoData, loadLeaderboard, saveCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
+import { upsertPet } from "@/lib/petCollection";
 import type { LeaderboardEntry, NekoData } from "@/types";
 
 export default function LeaderboardPage() {
@@ -26,7 +27,8 @@ export default function LeaderboardPage() {
         router.replace("/gacha");
         return;
       }
-      const decayed = { ...loaded.data, pet: decayPet(loaded.data.pet) };
+      const decayedPet = decayPet(loaded.data.pet);
+      const decayed = upsertPet({ ...loaded.data, pet: decayedPet, activePetId: decayedPet.id }, decayedPet);
       await saveCurrentNekoData(decayed);
       setData(decayed);
       setRows((await loadLeaderboard(decayed)).sort((a, b) => healthScore(b) - healthScore(a)));
