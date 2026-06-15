@@ -11,6 +11,18 @@ export type PetAnimation =
 
 export type PetColorId = "orange" | "brown" | "gray" | "blue" | "mint" | "lavender";
 
+export type PixelIconName =
+  | "feed"
+  | "bath"
+  | "poop"
+  | "play"
+  | "fish"
+  | "can"
+  | "bento"
+  | "snack"
+  | "home"
+  | "rank";
+
 export type User = {
   id: string;
   username: string;
@@ -57,6 +69,6 @@ export type LeaderboardEntry = {
 export type Food = {
   id: "fish" | "can" | "bento" | "snack";
   label: string;
-  icon: string;
+  icon: PixelIconName;
   hungerBoost: number;
 };

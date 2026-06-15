@@ -35,9 +35,22 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.pixel-icon {
+  display: inline-grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  image-rendering: pixelated;
+}
+
+.pixel-icon-cell {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
 .food-flight {
   animation: food-flight 850ms ease-in-out both;
-  font-size: 2rem;
   left: 3rem;
   position: absolute;
   top: 5rem;
