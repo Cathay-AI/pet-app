@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthStatus from "@/components/AuthStatus";
@@ -63,17 +64,12 @@ export default function LeaderboardPage() {
             const score = healthScore(entry);
             const weakest = weakestCare(entry);
             return (
-              <div
+              <Link
                 key={entry.id}
-                role={entry.isSelf ? "button" : undefined}
-                tabIndex={entry.isSelf ? 0 : undefined}
-                onClick={entry.isSelf ? () => router.push("/home") : undefined}
-                onKeyDown={(event) => {
-                  if (!entry.isSelf) return;
-                  if (event.key === "Enter" || event.key === " ") router.push("/home");
-                }}
+                href={`/rooms/${encodeURIComponent(entry.id)}`}
+                aria-label={`拜訪 ${entry.username} 的房間`}
                 className={`grid grid-cols-[3rem_3.75rem_1fr_3.25rem] items-center gap-2 border-b-4 border-[#F5E6C8] p-3 last:border-b-0 ${
-                  entry.isSelf ? "cursor-pointer bg-[#F5E6C8] outline-none focus:bg-[#FFE0DA]" : "bg-white"
+                  entry.isSelf ? "bg-[#F5E6C8] outline-none focus:bg-[#FFE0DA]" : "bg-white focus:bg-[#FDF8F0]"
                 }`}
               >
                 <div className="text-center">
@@ -103,7 +99,7 @@ export default function LeaderboardPage() {
                   <p className={`text-2xl font-black ${score < 40 ? "text-[#E24B4A]" : "text-[#3D2B1F]"}`}>{score}</p>
                   <p className="text-xs font-black text-[#8B6F5E]">分</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </section>

@@ -171,44 +171,44 @@ export async function loadLeaderboard(currentData: NekoData | null): Promise<Lea
 
   if (error || !data) return mergeLocalLeaderboard(currentData);
 
-  const remote = data.map((pet) => ({
-    id: pet.id,
-    username: pet.profiles?.username ?? "Neko 用戶",
-    petName: pet.name,
-    petType: pet.type,
-    petColor: pet.color,
-    hunger: pet.hunger,
-    cleanliness: pet.cleanliness,
-    mood: pet.mood,
-    isSick: pet.is_sick,
-    lastCareAt: latestCareAt(mapPet(pet)),
-    isSelf: pet.user_id === auth.userId
-  }));
+  const remote = data.map((pet) => mapPetEntry(pet, pet.profiles?.username ?? "Neko 用戶", pet.user_id === auth.userId));
 
   return remote.length ? remote : mergeLocalLeaderboard(currentData);
+}
+
+export async function loadPublicRoom(petId: string, currentData: NekoData | null = null): Promise<LeaderboardEntry | null> {
+  const localData = currentData ?? loadNekoData();
+  const supabase = getSupabaseBrowserClient();
+
+  if (supabase) {
+    const auth = await getAuthState();
+    const { data, error } = await supabase
+      .from("pets")
+      .select("*, profiles(username)")
+      .eq("id", petId)
+      .maybeSingle<DbPet>();
+
+    if (!error && data) {
+      return mapPetEntry(data, data.profiles?.username ?? "Neko 用戶", data.user_id === auth.userId);
+    }
+  }
+
+  return localRoomEntries(localData).find((entry) => entry.id === petId) ?? null;
 }
 
 export function mergeLocalLeaderboard(data: NekoData | null) {
   const self: LeaderboardEntry[] =
     data?.user && data.pet
-      ? [
-          {
-            id: data.user.id,
-            username: data.user.username,
-            petName: data.pet.name,
-            petType: data.pet.type,
-            petColor: data.pet.color,
-            hunger: data.pet.hunger,
-            cleanliness: data.pet.cleanliness,
-            mood: data.pet.mood,
-            isSick: data.pet.isSick,
-            lastCareAt: latestCareAt(data.pet),
-            isSelf: true
-          }
-        ]
+      ? [mapLocalPetEntry(data.user, data.pet, true)]
       : [];
 
   return [...FAKE_LEADERBOARD, ...self];
+}
+
+function localRoomEntries(data: NekoData | null) {
+  const localEntries =
+    data?.user && data.pets.length ? data.pets.map((pet) => mapLocalPetEntry(data.user as User, pet, true)) : [];
+  return [...FAKE_LEADERBOARD, ...localEntries];
 }
 
 function mapProfile(profile: DbProfile): User {
@@ -235,6 +235,38 @@ function mapPet(pet: DbPet): Pet {
     lastBathAt: pet.last_bath_at,
     lastPlayAt: pet.last_play_at,
     updatedAt: pet.updated_at
+  };
+}
+
+function mapPetEntry(pet: DbPet, username: string, isSelf: boolean): LeaderboardEntry {
+  return {
+    id: pet.id,
+    username,
+    petName: pet.name,
+    petType: pet.type,
+    petColor: pet.color,
+    hunger: pet.hunger,
+    cleanliness: pet.cleanliness,
+    mood: pet.mood,
+    isSick: pet.is_sick,
+    lastCareAt: latestCareAt(mapPet(pet)),
+    isSelf
+  };
+}
+
+function mapLocalPetEntry(user: User, pet: Pet, isSelf: boolean): LeaderboardEntry {
+  return {
+    id: pet.id,
+    username: user.username,
+    petName: pet.name,
+    petType: pet.type,
+    petColor: pet.color,
+    hunger: pet.hunger,
+    cleanliness: pet.cleanliness,
+    mood: pet.mood,
+    isSick: pet.isSick,
+    lastCareAt: latestCareAt(pet),
+    isSelf
   };
 }
 
