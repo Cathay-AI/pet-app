@@ -63,11 +63,20 @@ function PixelStars({ lowMood }: { lowMood: boolean }) {
 function DirtyPixels({ veryDirty }: { veryDirty: boolean }) {
   return (
     <>
+      <span className="absolute bottom-[6.6rem] left-[25%] h-3 w-3 bg-[#5E3A26]" />
+      <span className="absolute bottom-[6.1rem] left-[22%] h-4 w-8 bg-[#6F452D]" />
+      <span className="absolute bottom-[5.55rem] left-[19%] h-5 w-14 border-2 border-[#0E0E1E] bg-[#8B5A3C] shadow-[3px_3px_0_#0E0E1E]" />
+      <span className="poop-stink-line poop-stink-line-1 absolute bottom-[7.7rem] left-[21%] h-8 w-1 bg-[#82D8A8]" />
+      <span className="poop-stink-line poop-stink-line-2 absolute bottom-[8.2rem] left-[27%] h-9 w-1 bg-[#82D8A8]" />
+      <span className="poop-stink-line poop-stink-line-3 absolute bottom-[7.6rem] left-[34%] h-7 w-1 bg-[#82D8A8]" />
       <span className="absolute bottom-9 left-32 h-2 w-2 bg-[#8B6F5E]" />
       <span className="absolute bottom-6 left-40 h-1 w-3 bg-[#8B6F5E]" />
       <span className="absolute bottom-12 right-36 h-2 w-2 bg-[#8B6F5E]" />
       {veryDirty ? (
         <>
+          <span className="absolute bottom-[5.2rem] left-[17%] h-3 w-4 bg-[#5E4A3C]" />
+          <span className="absolute bottom-[4.9rem] left-[32%] h-2 w-5 bg-[#5E4A3C]" />
+          <span className="absolute bottom-[7.7rem] left-[38%] h-3 w-3 bg-[#82D8A8]" />
           <span className="absolute bottom-14 left-24 h-2 w-3 bg-[#5E4A3C]" />
           <span className="absolute bottom-7 right-28 h-2 w-2 bg-[#5E4A3C]" />
           <span className="absolute bottom-16 right-20 h-1 w-3 bg-[#5E4A3C]" />

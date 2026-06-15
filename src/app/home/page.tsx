@@ -276,10 +276,13 @@ export default function HomePage() {
             <button
               type="button"
               onClick={cleanPoop}
-              className="absolute bottom-8 left-8 z-20 grid h-11 w-11 place-items-center rounded-md border-2 border-[#3D2B1F] bg-[#F5E6C8] text-xl shadow-[3px_3px_0_#3D2B1F]"
+              className="poop-cleanup-button absolute bottom-8 left-7 z-30 grid h-16 w-16 place-items-center rounded-md border-4 border-[#E24B4A] bg-[#FFE0DA] text-xl shadow-[4px_4px_0_#3D2B1F]"
               aria-label="清便便"
             >
-              <PixelIcon name="poop" size="md" />
+              <span className="poop-cleanup-smell poop-cleanup-smell-1" />
+              <span className="poop-cleanup-smell poop-cleanup-smell-2" />
+              <span className="poop-cleanup-smell poop-cleanup-smell-3" />
+              <PixelIcon name="poop" size="lg" />
             </button>
           ) : null}
           <div className="relative z-10 min-h-72">

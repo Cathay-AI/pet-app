@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import DirtyRoomSignal from "@/components/DirtyRoomSignal";
 import PetCanvas from "@/components/PetCanvas";
 import PixelRoom from "@/components/PixelRoom";
 import StatusBar from "@/components/StatusBar";
@@ -106,6 +107,7 @@ export default function PublicRoomPage() {
               {petStatusText(pet)}
             </p>
           </div>
+          {entry.cleanliness < 50 && !entry.isSick ? <DirtyRoomSignal veryDirty={entry.cleanliness < 25} /> : null}
         </section>
 
         <section className="mt-5 rounded-md border-4 border-[#D4A96A] bg-white p-4 shadow-[4px_4px_0_#D4A96A]">
