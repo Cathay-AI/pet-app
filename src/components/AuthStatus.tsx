@@ -26,7 +26,7 @@ export default function AuthStatus({ auth, mode = "light" }: AuthStatusProps) {
           isDark ? "border-[#FDF8F0] text-[#FDF8F0]" : "border-[#D4A96A] text-[#8B6F5E]"
         }`}
       >
-        本機模式
+        未公開
       </span>
     );
   }
