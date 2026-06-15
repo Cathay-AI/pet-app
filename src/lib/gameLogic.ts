@@ -119,8 +119,8 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
   const deadlines: CareDeadline[] = [
     deadlineForStat({
       id: "hunger-low",
-      label: "飢餓警戒",
-      detail: "飽足低於 20%",
+      label: "快餓了",
+      detail: "回來餵牠",
       value: current.hunger,
       threshold: 20,
       decayPerHour: DECAY_PER_HOUR.hunger,
@@ -129,8 +129,8 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
     }),
     deadlineForStat({
       id: "poop",
-      label: "地板變髒",
-      detail: "清潔低於 50%",
+      label: "地板快髒了",
+      detail: "回來整理房間",
       value: current.cleanliness,
       threshold: 50,
       decayPerHour: DECAY_PER_HOUR.cleanliness,
@@ -139,8 +139,8 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
     }),
     deadlineForStat({
       id: "dirty",
-      label: "清潔警戒",
-      detail: "清潔低於 20%",
+      label: "想洗澡",
+      detail: "回來幫牠洗乾淨",
       value: current.cleanliness,
       threshold: 20,
       decayPerHour: DECAY_PER_HOUR.cleanliness,
@@ -149,8 +149,8 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
     }),
     deadlineForStat({
       id: "mood-low",
-      label: "心情低落",
-      detail: "心情低於 40%",
+      label: "想你陪牠",
+      detail: "回來陪牠玩一下",
       value: current.mood,
       threshold: 40,
       decayPerHour: DECAY_PER_HOUR.mood,
@@ -167,8 +167,8 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
   const zeroMs = Math.min(...zeroTimes);
   deadlines.push({
     id: "sick",
-    label: "生病扣分",
-    detail: "健康分公開減半",
+    label: "不能再拖太久",
+    detail: "回來照顧牠",
     at: new Date(now.getTime() + zeroMs + SICK_GRACE_MS),
     remainingMs: zeroMs + SICK_GRACE_MS,
     severity: "critical"

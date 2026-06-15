@@ -50,7 +50,7 @@ export async function getAuthState(): Promise<AuthState> {
 
 export async function signInWithEmail(email: string) {
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) return { error: "Supabase 尚未設定環境變數。" };
+  if (!supabase) return { error: "目前只能在這台裝置照顧，分數不會公開。" };
 
   const { error } = await supabase.auth.signInWithOtp({
     email,

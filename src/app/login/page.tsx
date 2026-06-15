@@ -15,7 +15,7 @@ export default function LoginPage() {
     getAuthState().then((auth) => {
       if (!auth.isConfigured) {
         setStatus("local");
-        setMessage("目前尚未設定 Supabase，Neko 會先使用本機模式。");
+        setMessage("目前只能在這台裝置照顧，分數不會公開。");
       } else if (auth.userId) {
         router.replace("/home");
       }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthStatus from "@/components/AuthStatus";
 import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
 import StatusBar from "@/components/StatusBar";
@@ -10,6 +9,7 @@ import { BATH_COOLDOWN_MS, FOODS, PLAY_COOLDOWN_MS } from "@/lib/constants";
 import {
   canBath,
   canPlay,
+  type CareDeadline,
   carePet,
   decayPet,
   formatCooldown,
@@ -21,7 +21,7 @@ import {
   petStatusText,
   remainingCooldown
 } from "@/lib/gameLogic";
-import { loadCurrentNekoData, saveCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
+import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
 import type { NekoData, Pet, PetAnimation } from "@/types";
 
 export default function HomePage() {
@@ -31,13 +31,9 @@ export default function HomePage() {
   const [showFood, setShowFood] = useState(false);
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(() => new Date());
-  const [auth, setAuth] = useState<AuthState | null>(null);
-  const [source, setSource] = useState<"supabase" | "local">("local");
 
   useEffect(() => {
     loadCurrentNekoData().then((loaded) => {
-      setAuth(loaded.auth);
-      setSource(loaded.source);
       if (loaded.auth.isConfigured && !loaded.auth.userId) {
         router.replace("/login");
         return;
@@ -65,7 +61,7 @@ export default function HomePage() {
     setData((current) => {
       if (!current?.pet || !current.user) return current;
       const next = { ...current, pet: updater(current.pet) };
-      void saveCurrentNekoData(next).then(setSource);
+      void saveCurrentNekoData(next);
       return next;
     });
     if (nextMessage) setMessage(nextMessage);
@@ -91,6 +87,7 @@ export default function HomePage() {
   const poopVisible = needsPoopCleanup(pet);
   const deadlines = getCareDeadlines(pet, now);
   const nextDeadline = deadlines[0];
+  const deadlinePrompt = getDeadlinePrompt(pet.name, nextDeadline);
 
   function feed(boost: number, label: string) {
     updatePet(
@@ -178,12 +175,9 @@ export default function HomePage() {
             <p className="text-sm font-black text-[#8B6F5E]">{data.user.username}</p>
             <h1 className="text-2xl font-black">Neko</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <AuthStatus auth={auth} />
-            <div className="rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-3 py-2 text-right shadow-[3px_3px_0_#3D2B1F]">
-              <p className="text-[11px] font-black text-[#8B6F5E]">{source === "supabase" ? "公開健康" : "本機健康"}</p>
-              <p className="text-xl font-black">{healthScore(pet)}</p>
-            </div>
+          <div className="rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-3 py-2 text-right shadow-[3px_3px_0_#3D2B1F]">
+            <p className="text-[11px] font-black text-[#8B6F5E]">健康分</p>
+            <p className="text-xl font-black">{healthScore(pet)}</p>
           </div>
         </header>
 
@@ -218,10 +212,11 @@ export default function HomePage() {
         <section className="mt-5 space-y-3 rounded-md border-4 border-[#D4A96A] bg-white p-4 shadow-[4px_4px_0_#D4A96A]">
           <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b-4 border-[#F5E6C8] pb-3">
             <div className="min-w-0">
-              <p className="text-xs font-black text-[#8B6F5E]">下次回來</p>
+              <p className="text-xs font-black text-[#8B6F5E]">下一次需要你</p>
               <p className="text-sm font-black leading-tight text-[#3D2B1F]">
-                {nextDeadline.label} · {nextDeadline.detail}
+                {deadlinePrompt.title}
               </p>
+              <p className="mt-1 text-xs font-bold leading-tight text-[#8B6F5E]">{deadlinePrompt.detail}</p>
             </div>
             <p
               className={`rounded border-2 border-[#3D2B1F] px-2 py-1 text-sm font-black ${
@@ -300,4 +295,31 @@ function ActionButton({
       {note ? <span className="mt-1 block text-[10px] leading-tight text-[#8B6F5E]">{note}</span> : null}
     </button>
   );
+}
+
+function getDeadlinePrompt(petName: string, deadline: CareDeadline) {
+  const isNow = deadline.remainingMs <= 60000;
+
+  switch (deadline.id) {
+    case "hunger-low":
+      return isNow
+        ? { title: `${petName} 餓了`, detail: "現在餵牠一口，牠會安心很多。" }
+        : { title: `${petName} 等一下會餓`, detail: "晚點回來餵牠，別讓牠空著肚子等太久。" };
+    case "poop":
+      return isNow
+        ? { title: "地板有點髒了", detail: "幫牠清一下，房間會舒服很多。" }
+        : { title: "地板快要髒了", detail: "回來看一眼，順手幫牠整理一下。" };
+    case "dirty":
+      return isNow
+        ? { title: `${petName} 想洗香香`, detail: "洗完牠會清爽一點，也比較有精神。" }
+        : { title: `${petName} 等一下會想洗澡`, detail: "晚點回來幫牠洗乾淨。" };
+    case "mood-low":
+      return isNow
+        ? { title: `${petName} 想你陪牠`, detail: "陪牠玩一下，心情會好很多。" }
+        : { title: `${petName} 晚點會想你`, detail: "回來陪牠玩一下，別讓牠自己悶太久。" };
+    case "sick":
+      return isNow
+        ? { title: `${petName} 真的不舒服`, detail: "先治療牠，再慢慢把狀態照顧回來。" }
+        : { title: `${petName} 不能再拖太久`, detail: "再放著不管，牠會生病，健康分也會掉。" };
+  }
 }
