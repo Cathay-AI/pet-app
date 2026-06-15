@@ -1,36 +1,18 @@
 # Neko
 
-Neko is a frontend prototype for a "virtual pet x goal achievement" product. The MVP focuses on one savings goal: users create a goal, add daily progress, earn coins, unlock pet skins, and see achievements.
+Neko is a pixel virtual pet app built around one product principle:
 
-Live app: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
+> Real time creates virtual responsibility.
 
-This project is intentionally frontend-only today. The code is structured so the product can later grow into a backend-backed web app and an iOS app without rewriting the core product rules.
+Users draw one cat or dog, care for it over real time, and see the result reflected in a public health leaderboard.
 
-## Current MVP Scope
+## Stack
 
-Included:
-
-- Next.js App Router frontend
+- Next.js App Router
 - React + TypeScript
 - Tailwind CSS
-- Single-user localStorage persistence
-- One savings goal
-- Manual progress records
-- Coin rewards
-- Pet status logic
-- Reward shop
-- Achievements
-- Mobile-friendly responsive UI
-
-Not included:
-
-- Login
-- Backend API
-- Database
-- AI chat
-- Voice input
-- Native iOS implementation
-- Multi-user social features
+- Supabase-ready Auth + Postgres persistence
+- localStorage fallback for local demo mode
 
 ## Quick Start
 
@@ -57,147 +39,99 @@ The build script uses webpack:
 "build": "next build --webpack"
 ```
 
-This avoids a local Turbopack sandbox issue observed during development. Vercel can still deploy the app directly from this repository.
+## Supabase Setup
+
+The app works without Supabase by falling back to localStorage. To enable login and shared leaderboard data:
+
+1. Create a Supabase project.
+2. Run the SQL in `supabase/migrations/001_neko_auth_pets.sql`.
+3. Copy `.env.example` to `.env.local`.
+4. Fill in:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+5. Restart `npm run dev`.
+
+When Supabase is configured, `/login` sends a magic-link email. Authenticated users store `profiles` and `pets` in Supabase. Without those env vars, the app displays local mode and keeps using browser storage.
+
+## Current Routes
+
+```text
+/             Entry router
+/login        Magic-link login
+/gacha        First pet draw and naming
+/home         Pet care screen
+/leaderboard  Public health ranking
+```
 
 ## Project Structure
 
 ```text
 src/
   app/
-    page.tsx              App entry, view switching, top-level state
-    layout.tsx            Metadata and root HTML layout
-    globals.css           Tailwind globals and shared utility classes
-    icon.svg              App favicon
+    gacha/page.tsx
+    home/page.tsx
+    leaderboard/page.tsx
+    login/page.tsx
+    page.tsx
 
   components/
-    LandingPage.tsx       Product intro and CTA
-    GoalSetup.tsx         Savings goal form
-    Dashboard.tsx         Main product screen and mobile panel tabs
-    PetCard.tsx           Pet display, status, and feedback
-    ProgressModal.tsx     Add progress bottom-sheet/modal
-    RewardShop.tsx        Skin unlock/apply UI
-    AchievementList.tsx   Achievement display and unlock toast
+    AuthStatus.tsx
+    BottomNav.tsx
+    PetCanvas.tsx
+    StatusBar.tsx
 
   lib/
-    constants.ts          Static game data and initial state
-    gameLogic.ts          Pure product/game rules
-    storage.ts            localStorage repository for current MVP
+    constants.ts
+    gameLogic.ts
+    nekoRepository.ts
+    storage.ts
+    supabase/
+      browser.ts
+      config.ts
 
   types/
-    index.ts              Shared TypeScript data model
+    index.ts
 
 docs/
-  ARCHITECTURE.md         Longer-term architecture and team split notes
+  PRODUCT_PRINCIPLE.md
+
+supabase/
+  migrations/
+    001_neko_auth_pets.sql
 ```
 
-## Core Data Model
+## Persistence Model
 
-The product state is represented by `AppData`:
+`nekoRepository.ts` is the persistence boundary:
 
-```ts
-type AppData = {
-  version: 1;
-  goal: Goal | null;
-  records: ProgressRecord[];
-  userState: UserState;
-};
-```
+- Supabase configured + authenticated: read/write Supabase.
+- Supabase missing or unauthenticated local mode: read/write localStorage.
 
-The `version` field exists so future storage migrations can be handled safely.
+The UI should not directly decide where data lives.
 
-## Architectural Rules
+## Product Rule
 
-Keep these boundaries clear:
-
-- `components/` owns UI only.
-- `lib/gameLogic.ts` owns product rules and should stay framework-independent.
-- `lib/storage.ts` owns persistence for the current localStorage MVP.
-- `types/` owns shared data contracts.
-- `constants.ts` owns static skins, achievements, daily tasks, and initial state.
-
-Avoid putting business rules directly inside React components. If a rule affects coins, streak, achievements, pet status, storage shape, or goal progress, put it in `lib/gameLogic.ts` or a future domain module.
-
-## Future Backend Split
-
-When a backend is introduced, keep the frontend contract stable:
+Neko does not update every pet in the database on a timer. It stores the last known values and timestamps, then computes real-time decay when data is read or acted on. This keeps the core loop accurate without background jobs:
 
 ```text
-UI components
-  -> app state/actions
-    -> AppDataRepository interface
-      -> localStorage implementation today
-      -> API implementation later
+last state + real elapsed time -> current hunger / cleanliness / mood
 ```
 
-Recommended backend ownership:
+## Validation
 
-- Auth and accounts
-- Database schema
-- Goal CRUD
-- Progress record CRUD
-- Server-side achievement validation
-- Sync and conflict handling
-- Analytics/event tracking
+Before opening a PR:
 
-Recommended frontend ownership:
+```bash
+npm run build
+```
 
-- UI screens and interaction states
-- Form validation and user guidance
-- Optimistic updates
-- Offline/local cache behavior
-- Responsive web experience
-- Shared TypeScript contracts with backend
+For UI changes, verify:
 
-## Future iOS App Direction
-
-The current Next.js UI should not be treated as the future iOS codebase. Instead, preserve reusable product concepts:
-
-- Reuse the data model shape where practical.
-- Keep product rules in portable TypeScript modules while the web app is the only client.
-- Later, extract shared contracts and game rules into a package such as `packages/core`.
-- Build the iOS UI natively or with React Native, depending on product and team constraints.
-- iOS persistence should use an adapter equivalent to `storage.ts`, not direct localStorage logic.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the suggested evolution path.
-
-## Development Workflow
-
-Before changing behavior:
-
-1. Identify whether the change is UI, product rule, persistence, or data contract.
-2. Put the change in the matching layer.
-3. Run `npm run build`.
-4. For UI/RWD changes, test at least:
-   - mobile: `390x844`
-   - desktop: `1280x800`
-5. Check browser console for runtime errors.
-
-## Deployment
-
-This app is Vercel-ready:
-
-- Framework: Next.js
-- Build command: `npm run build`
-- Output: Next.js default
-- Environment variables: none required for MVP
-- Production URL: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
-
-Because data is stored in localStorage, deployed users only see data on the same browser/device. This is expected for the MVP.
-
-## Known Limitations
-
-- localStorage is not a multi-device sync solution.
-- Current achievements are rule-based and client-side.
-- No automated test suite exists yet.
-- No backend validation exists yet.
-- No iOS app exists yet.
-
-## Suggested Next Refactors
-
-When the product moves beyond prototype:
-
-1. Add a repository interface for app data persistence.
-2. Add unit tests for `gameLogic.ts`.
-3. Add schema migration helpers for `AppData.version`.
-4. Extract shared contracts into a package if backend or iOS work begins.
-5. Add API routes only after backend requirements are concrete.
+- `/gacha` draw and naming
+- `/home` care actions and countdown
+- `/leaderboard` public score rows
+- localStorage fallback when Supabase env vars are missing

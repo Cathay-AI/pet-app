@@ -1,161 +1,227 @@
-import { achievements, skins } from "@/lib/constants";
-import type { AppData, Goal, ProgressRecord, UserState } from "@/types";
+import { BATH_COOLDOWN_MS, DECAY_PER_HOUR, PLAY_COOLDOWN_MS, SICK_GRACE_MS } from "@/lib/constants";
+import type { LeaderboardEntry, Pet, PetAnimation } from "@/types";
 
-export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("zh-TW", {
-    style: "currency",
-    currency: "TWD",
-    maximumFractionDigits: 0
-  }).format(amount);
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+export type CareDeadline = {
+  id: "hunger-low" | "poop" | "dirty" | "mood-low" | "sick";
+  label: string;
+  detail: string;
+  at: Date;
+  remainingMs: number;
+  severity: "watch" | "risk" | "critical";
+};
+
+export function clampStat(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-export function getProgressPercent(goal: Goal | null) {
-  if (!goal || goal.targetAmount <= 0) return 0;
-  return Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
+export function healthScore(input: Pick<Pet | LeaderboardEntry, "hunger" | "cleanliness" | "mood" | "isSick">) {
+  const base = (input.hunger + input.cleanliness + input.mood) / 3;
+  return Math.round(input.isSick ? base * 0.5 : base);
 }
 
-export function getPetStatus(percent: number) {
-  if (percent >= 100) {
-    return { emoji: "👑", label: "目標達成，寵物進化", tone: "完成進化" };
-  }
-  if (percent >= 81) {
-    return { emoji: "🦁", label: "接近完成，非常興奮", tone: "非常興奮" };
-  }
-  if (percent >= 51) {
-    return { emoji: "🐯", label: "狀態很好，很有活力", tone: "很有活力" };
-  }
-  if (percent >= 26) {
-    return { emoji: "🐱", label: "逐漸成長，開始有精神", tone: "開始有精神" };
-  }
-  return { emoji: "🐣", label: "剛開始，有點懶散", tone: "有點懶散" };
-}
+export function decayPet(pet: Pet, now = new Date()) {
+  const updatedAt = new Date(pet.updatedAt);
+  const elapsedHours = Math.max(0, now.getTime() - updatedAt.getTime()) / HOUR_MS;
+  if (elapsedHours <= 0) return pet;
 
-export function getSelectedSkin(userState: UserState) {
-  return skins.find((skin) => skin.id === userState.selectedSkinId) ?? skins[0];
-}
-
-export function getDailySuggestedAmount(goal: Goal | null) {
-  if (!goal) return 300;
-
-  const today = startOfDay(new Date());
-  const deadline = startOfDay(new Date(goal.deadline));
-  const remainingDays = Math.max(1, Math.ceil((deadline.getTime() - today.getTime()) / 86400000));
-  const remainingAmount = Math.max(0, goal.targetAmount - goal.currentAmount);
-
-  return Math.max(100, Math.ceil(remainingAmount / remainingDays));
-}
-
-export function calculateCoins(recordAmount: number, suggestedAmount: number, completedGoal: boolean) {
-  let coins = recordAmount > 0 ? 10 : 0;
-  if (recordAmount >= suggestedAmount && recordAmount > 0) coins += 20;
-  if (completedGoal) coins += 100;
-  return coins;
-}
-
-export function calculateNextStreak(lastRecordDate: string | null, now = new Date()) {
-  const today = toDateKey(now);
-  if (!lastRecordDate) return 1;
-  if (lastRecordDate === today) return null;
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-
-  return lastRecordDate === toDateKey(yesterday) ? undefined : 1;
-}
-
-export function resolveStreak(lastRecordDate: string | null, currentStreak: number, now = new Date()) {
-  const result = calculateNextStreak(lastRecordDate, now);
-  if (result === null) return currentStreak;
-  if (typeof result === "undefined") return currentStreak + 1;
-  return result;
-}
-
-export function getFeedback(amount: number, percent: number, type: ProgressRecord["type"], completedGoal: boolean) {
-  if (completedGoal) return "目標達成，寵物完成進化。";
-  if (percent >= 50) return "你已經完成一半了，現在不要停。";
-  if (type === "reduced_spending") return "少喝一杯飲料也算進步，繼續累積。";
-  if (amount >= 1000) return "這筆存款很關鍵，寵物變得更有精神了。";
-  return "很好，今天又離目標更近一步了。";
-}
-
-export function getUnlockedAchievements(data: AppData) {
-  const goal = data.goal;
-  const percent = getProgressPercent(goal);
-  const ids = new Set(data.userState.unlockedAchievementIds);
-
-  if (data.records.length >= 1) ids.add("first_record");
-  if ((goal?.currentAmount ?? 0) >= 1000) ids.add("save_1000");
-  if (percent >= 50) ids.add("progress_50");
-  if (percent >= 100) ids.add("goal_completed");
-  if (data.userState.streak >= 7) ids.add("streak_7");
-
-  return achievements.filter((achievement) => ids.has(achievement.id)).map((achievement) => achievement.id);
-}
-
-export function applyProgressRecord(data: AppData, record: ProgressRecord) {
-  if (!data.goal) return { data, earnedCoins: 0, feedback: "" };
-
-  const previousPercent = getProgressPercent(data.goal);
-  const suggestedAmount = getDailySuggestedAmount(data.goal);
-  const nextGoal: Goal = {
-    ...data.goal,
-    currentAmount: Math.max(0, data.goal.currentAmount + record.amount)
-  };
-  const completedGoal = previousPercent < 100 && getProgressPercent(nextGoal) >= 100;
-  const earnedCoins = calculateCoins(record.amount, suggestedAmount, completedGoal);
-  const today = toDateKey(new Date());
-  const nextState: UserState = {
-    ...data.userState,
-    coins: data.userState.coins + earnedCoins,
-    streak: resolveStreak(data.userState.lastRecordDate, data.userState.streak),
-    lastRecordDate: today
-  };
-
-  const nextData: AppData = {
-    version: data.version,
-    goal: nextGoal,
-    records: [record, ...data.records],
-    userState: nextState
-  };
-
-  nextData.userState.unlockedAchievementIds = getUnlockedAchievements(nextData);
+  const hunger = clampStat(pet.hunger - DECAY_PER_HOUR.hunger * elapsedHours);
+  const cleanliness = clampStat(pet.cleanliness - DECAY_PER_HOUR.cleanliness * elapsedHours);
+  const mood = clampStat(pet.mood - DECAY_PER_HOUR.mood * elapsedHours);
+  const hasZero = hunger === 0 || cleanliness === 0 || mood === 0;
+  const zeroSinceAt = hasZero ? pet.zeroSinceAt ?? now.toISOString() : null;
+  const zeroDuration = zeroSinceAt ? now.getTime() - new Date(zeroSinceAt).getTime() : 0;
 
   return {
-    data: nextData,
-    earnedCoins,
-    feedback: getFeedback(record.amount, getProgressPercent(nextGoal), record.type, completedGoal)
+    ...pet,
+    hunger,
+    cleanliness,
+    mood,
+    zeroSinceAt,
+    isSick: pet.isSick || zeroDuration >= SICK_GRACE_MS,
+    updatedAt: now.toISOString()
   };
 }
 
-export function buySkin(data: AppData, skinId: string) {
-  const skin = skins.find((item) => item.id === skinId);
-  if (!skin) return data;
-  if (data.userState.unlockedSkinIds.includes(skinId)) {
-    return {
-      ...data,
-      userState: { ...data.userState, selectedSkinId: skinId }
-    };
-  }
-  if (data.userState.coins < skin.price) return data;
+export function carePet(pet: Pet, changes: Partial<Pick<Pet, "hunger" | "cleanliness" | "mood">>, now = new Date()) {
+  const next = {
+    ...decayPet(pet, now),
+    hunger: clampStat(changes.hunger ?? pet.hunger),
+    cleanliness: clampStat(changes.cleanliness ?? pet.cleanliness),
+    mood: clampStat(changes.mood ?? pet.mood),
+    updatedAt: now.toISOString()
+  };
 
+  const hasZero = next.hunger === 0 || next.cleanliness === 0 || next.mood === 0;
   return {
-    ...data,
-    userState: {
-      ...data.userState,
-      coins: data.userState.coins - skin.price,
-      selectedSkinId: skinId,
-      unlockedSkinIds: [...data.userState.unlockedSkinIds, skinId]
-    }
+    ...next,
+    zeroSinceAt: hasZero ? next.zeroSinceAt ?? now.toISOString() : null
   };
 }
 
-export function toDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+export function getPetMoodState(pet: Pet): PetAnimation {
+  if (pet.isSick || pet.hunger === 0 || pet.cleanliness === 0 || pet.mood === 0) return "sick";
+  if (pet.hunger < 40 || pet.cleanliness < 40 || pet.mood < 40) return "sad";
+  if (pet.hunger > 70 && pet.cleanliness > 70 && pet.mood > 70) return "happy";
+  return "idle";
 }
 
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+export function petStatusText(pet: Pet) {
+  if (pet.isSick) return `${pet.name} 生病了，需要治療`;
+  if (pet.hunger === 0 || pet.cleanliness === 0 || pet.mood === 0) return `${pet.name} 很虛弱`;
+  if (pet.hunger < 20) return `${pet.name} 肚子很餓`;
+  if (pet.cleanliness < 20) return `${pet.name} 需要洗香香`;
+  if (pet.hunger < 40 || pet.cleanliness < 40 || pet.mood < 40) return `${pet.name} 有點難過`;
+  if (pet.hunger > 70 && pet.cleanliness > 70 && pet.mood > 70) return `${pet.name} 很開心`;
+  return `${pet.name} 正在看著你`;
+}
+
+export function needsPoopCleanup(pet: Pet) {
+  return pet.cleanliness < 50;
+}
+
+export function canBath(pet: Pet, now = new Date()) {
+  return !pet.lastBathAt || now.getTime() - new Date(pet.lastBathAt).getTime() >= BATH_COOLDOWN_MS;
+}
+
+export function canPlay(pet: Pet, now = new Date()) {
+  return !pet.lastPlayAt || now.getTime() - new Date(pet.lastPlayAt).getTime() >= PLAY_COOLDOWN_MS;
+}
+
+export function remainingCooldown(lastAt: string | null, cooldownMs: number, now = new Date()) {
+  if (!lastAt) return 0;
+  return Math.max(0, cooldownMs - (now.getTime() - new Date(lastAt).getTime()));
+}
+
+export function formatCooldown(ms: number) {
+  if (ms <= 0) return "";
+  const totalMinutes = Math.ceil(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes} 分`;
+  return minutes > 0 ? `${hours} 小時 ${minutes} 分` : `${hours} 小時`;
+}
+
+export function formatCountdown(ms: number) {
+  if (ms <= MINUTE_MS) return "現在";
+  const totalMinutes = Math.ceil(ms / MINUTE_MS);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes} 分後`;
+  if (minutes === 0) return `${hours} 小時後`;
+  return `${hours} 小時 ${minutes} 分後`;
+}
+
+export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
+  const current = decayPet(pet, now);
+  const deadlines: CareDeadline[] = [
+    deadlineForStat({
+      id: "hunger-low",
+      label: "飢餓警戒",
+      detail: "飽足低於 20%",
+      value: current.hunger,
+      threshold: 20,
+      decayPerHour: DECAY_PER_HOUR.hunger,
+      severity: "critical",
+      now
+    }),
+    deadlineForStat({
+      id: "poop",
+      label: "地板變髒",
+      detail: "清潔低於 50%",
+      value: current.cleanliness,
+      threshold: 50,
+      decayPerHour: DECAY_PER_HOUR.cleanliness,
+      severity: "watch",
+      now
+    }),
+    deadlineForStat({
+      id: "dirty",
+      label: "清潔警戒",
+      detail: "清潔低於 20%",
+      value: current.cleanliness,
+      threshold: 20,
+      decayPerHour: DECAY_PER_HOUR.cleanliness,
+      severity: "risk",
+      now
+    }),
+    deadlineForStat({
+      id: "mood-low",
+      label: "心情低落",
+      detail: "心情低於 40%",
+      value: current.mood,
+      threshold: 40,
+      decayPerHour: DECAY_PER_HOUR.mood,
+      severity: "watch",
+      now
+    })
+  ];
+
+  const zeroTimes = [
+    timeUntilThreshold(current.hunger, 0, DECAY_PER_HOUR.hunger),
+    timeUntilThreshold(current.cleanliness, 0, DECAY_PER_HOUR.cleanliness),
+    timeUntilThreshold(current.mood, 0, DECAY_PER_HOUR.mood)
+  ];
+  const zeroMs = Math.min(...zeroTimes);
+  deadlines.push({
+    id: "sick",
+    label: "生病扣分",
+    detail: "健康分公開減半",
+    at: new Date(now.getTime() + zeroMs + SICK_GRACE_MS),
+    remainingMs: zeroMs + SICK_GRACE_MS,
+    severity: "critical"
+  });
+
+  return deadlines.sort((a, b) => a.remainingMs - b.remainingMs);
+}
+
+export function formatRelativeTime(iso: string) {
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "剛剛";
+  if (minutes < 60) return `${minutes}分鐘前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}小時前`;
+  return `${Math.floor(hours / 24)}天前`;
+}
+
+export function createId(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
+}
+
+function deadlineForStat({
+  id,
+  label,
+  detail,
+  value,
+  threshold,
+  decayPerHour,
+  severity,
+  now
+}: {
+  id: CareDeadline["id"];
+  label: string;
+  detail: string;
+  value: number;
+  threshold: number;
+  decayPerHour: number;
+  severity: CareDeadline["severity"];
+  now: Date;
+}) {
+  const remainingMs = timeUntilThreshold(value, threshold, decayPerHour);
+  return {
+    id,
+    label,
+    detail,
+    at: new Date(now.getTime() + remainingMs),
+    remainingMs,
+    severity
+  };
+}
+
+function timeUntilThreshold(value: number, threshold: number, decayPerHour: number) {
+  if (value <= threshold) return 0;
+  return ((value - threshold) / decayPerHour) * HOUR_MS;
 }

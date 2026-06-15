@@ -1,48 +1,34 @@
-import { initialAppData } from "@/lib/constants";
-import { getUnlockedAchievements } from "@/lib/gameLogic";
-import type { AppData } from "@/types";
+import { initialNekoData } from "@/lib/constants";
+import { decayPet } from "@/lib/gameLogic";
+import type { NekoData, Pet, User } from "@/types";
 
-const STORAGE_KEY = "neko-app-data";
-const STORAGE_VERSION = 1 as const;
+const STORAGE_KEY = "neko-virtual-pet-data";
 
-export function loadAppData(): AppData {
-  if (typeof window === "undefined") {
-    return initialAppData;
-  }
+export function loadNekoData(): NekoData {
+  if (typeof window === "undefined") return initialNekoData;
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialAppData;
-    const parsed = JSON.parse(raw) as Partial<AppData>;
+    if (!raw) return initialNekoData;
+    const parsed = JSON.parse(raw) as Partial<NekoData>;
+    if (!parsed.user || !parsed.pet) return initialNekoData;
 
-    const data = {
-      ...initialAppData,
-      ...parsed,
-      version: STORAGE_VERSION,
-      userState: {
-        ...initialAppData.userState,
-        ...parsed.userState
-      },
-      records: Array.isArray(parsed.records) ? parsed.records : []
-    };
     return {
-      ...data,
-      userState: {
-        ...data.userState,
-        unlockedAchievementIds: getUnlockedAchievements(data)
-      }
+      version: 1,
+      user: parsed.user as User,
+      pet: decayPet(parsed.pet as Pet)
     };
   } catch {
-    return initialAppData;
+    return initialNekoData;
   }
 }
 
-export function saveAppData(data: AppData) {
+export function saveNekoData(data: NekoData) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, version: STORAGE_VERSION }));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, version: 1 }));
 }
 
-export function clearAppData() {
+export function clearNekoData() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
 }

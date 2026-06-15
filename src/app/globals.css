@@ -4,23 +4,20 @@
 
 :root {
   color-scheme: light;
-  --background: #f5fbf7;
-  --foreground: #27323a;
+  --background: #fdf8f0;
+  --foreground: #3d2b1f;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   min-height: 100vh;
   margin: 0;
-  background: #f6efe3;
+  background: var(--background);
   color: var(--foreground);
+  image-rendering: pixelated;
 }
 
 button,
@@ -38,61 +35,43 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.card {
-  @apply rounded-lg border border-[#eadfcd] bg-white shadow-card;
+.food-flight {
+  animation: food-flight 850ms ease-in-out both;
+  font-size: 2rem;
+  left: 3rem;
+  position: absolute;
+  top: 5rem;
 }
 
-.quiet-panel {
-  @apply rounded-lg border border-[#eadfcd] bg-[#fffaf0] shadow-card;
-}
-
-.neko-shell {
-  @apply overflow-hidden rounded-lg border border-[#eadfcd] bg-[#fffaf0] shadow-soft;
-}
-
-.ritual-strip {
-  @apply flex flex-col gap-3 rounded-lg border border-[#eadfcd] bg-[#fffaf0] p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5;
-}
-
-.speech-bubble {
-  @apply absolute bottom-4 left-4 right-4 rounded-lg bg-white/95 px-4 py-3 text-sm font-semibold leading-6 text-ink shadow-card sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-[22rem];
-}
-
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-mint-500 focus:ring-offset-2;
-}
-
-.room-glow {
-  animation: room-glow 3000ms ease both;
-}
-
-.pet-bounce {
-  animation: pet-bounce 900ms ease-in-out 2;
-}
-
-@keyframes room-glow {
+@keyframes gacha-shake {
   0%,
   100% {
-    box-shadow: 0 18px 50px rgba(74, 113, 103, 0.14);
+    transform: translateX(0) rotate(0deg);
   }
-  35% {
-    box-shadow: 0 22px 60px rgba(246, 184, 75, 0.34);
+  25% {
+    transform: translateX(-5px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(5px) rotate(4deg);
   }
 }
 
-@keyframes pet-bounce {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
+@keyframes food-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-40px, 40px) scale(0.8);
   }
-  45% {
-    transform: translateY(-6px) scale(1.01);
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(80px, 70px) scale(0.35);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .room-glow,
-  .pet-bounce {
+  .food-flight {
     animation: none;
   }
 }
