@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
 import PixelIcon from "@/components/PixelIcon";
+import PixelRoom from "@/components/PixelRoom";
 import StatusBar from "@/components/StatusBar";
 import { BATH_COOLDOWN_MS, FEED_COOLDOWN_MS, FEED_FULL_THRESHOLD, FOODS, PLAY_COOLDOWN_MS } from "@/lib/constants";
 import {
@@ -232,7 +233,7 @@ export default function HomePage() {
         </header>
 
         <section className="relative overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-[#1A1A2E] p-5 shadow-[6px_6px_0_#3D2B1F]">
-          <div className="absolute inset-x-0 bottom-0 h-14 bg-[#2A2A46]" />
+          <PixelRoom cleanliness={pet.cleanliness} hunger={pet.hunger} mood={pet.mood} />
           {poopVisible && !pet.isSick ? (
             <button
               type="button"
