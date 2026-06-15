@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import PixelIcon from "@/components/PixelIcon";
+import type { PixelIconName } from "@/types";
 
-const tabs = [
-  { href: "/home", label: "首頁", icon: "⌂" },
-  { href: "/leaderboard", label: "排行", icon: "★" }
+const tabs: { href: string; label: string; icon: PixelIconName }[] = [
+  { href: "/home", label: "首頁", icon: "home" },
+  { href: "/leaderboard", label: "排行", icon: "rank" }
 ];
 
 export default function BottomNav() {
@@ -26,7 +28,7 @@ export default function BottomNav() {
                   : "border-[#D4A96A] bg-[#F5E6C8] text-[#3D2B1F]"
               }`}
             >
-              <span aria-hidden="true">{tab.icon}</span>
+              <PixelIcon name={tab.icon} size="sm" />
               {tab.label}
             </Link>
           );

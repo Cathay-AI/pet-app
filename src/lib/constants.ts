@@ -21,10 +21,10 @@ export const PET_COLORS: Record<
 export const COLOR_OPTIONS = Object.keys(PET_COLORS) as PetColorId[];
 
 export const FOODS: Food[] = [
-  { id: "fish", label: "小魚乾", icon: "🐟", hungerBoost: 18 },
-  { id: "can", label: "罐頭", icon: "🥫", hungerBoost: 28 },
-  { id: "bento", label: "便當", icon: "🍱", hungerBoost: 42 },
-  { id: "snack", label: "零食", icon: "🍪", hungerBoost: 12 }
+  { id: "fish", label: "小魚乾", icon: "fish", hungerBoost: 18 },
+  { id: "can", label: "罐頭", icon: "can", hungerBoost: 28 },
+  { id: "bento", label: "便當", icon: "bento", hungerBoost: 42 },
+  { id: "snack", label: "零食", icon: "snack", hungerBoost: 12 }
 ];
 
 export const DECAY_PER_HOUR = {

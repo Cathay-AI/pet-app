@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
+import PixelIcon from "@/components/PixelIcon";
 import StatusBar from "@/components/StatusBar";
 import { BATH_COOLDOWN_MS, FOODS, PLAY_COOLDOWN_MS } from "@/lib/constants";
 import {
@@ -22,13 +23,14 @@ import {
   remainingCooldown
 } from "@/lib/gameLogic";
 import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
-import type { NekoData, Pet, PetAnimation } from "@/types";
+import type { Food, NekoData, Pet, PetAnimation, PixelIconName } from "@/types";
 
 export default function HomePage() {
   const router = useRouter();
   const [data, setData] = useState<NekoData | null>(null);
   const [actionAnimation, setActionAnimation] = useState<PetAnimation | null>(null);
   const [showFood, setShowFood] = useState(false);
+  const [flyingFood, setFlyingFood] = useState<PixelIconName | null>(null);
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(() => new Date());
 
@@ -89,19 +91,21 @@ export default function HomePage() {
   const nextDeadline = deadlines[0];
   const deadlinePrompt = getDeadlinePrompt(pet.name, nextDeadline);
 
-  function feed(boost: number, label: string) {
+  function feed(food: Food) {
+    setFlyingFood(food.icon);
     updatePet(
       (current) => {
         const decayed = decayPet(current);
         return {
-          ...carePet(decayed, { hunger: decayed.hunger + boost, mood: decayed.mood + 4 }),
+          ...carePet(decayed, { hunger: decayed.hunger + food.hungerBoost, mood: decayed.mood + 4 }),
           lastFedAt: new Date().toISOString()
         };
       },
       true,
       "eating",
-      `${pet.name} 吃了${label}`
+      `${pet.name} 吃了${food.label}`
     );
+    window.setTimeout(() => setFlyingFood(null), 1300);
     setShowFood(false);
   }
 
@@ -190,11 +194,13 @@ export default function HomePage() {
               className="absolute bottom-8 left-8 z-10 grid h-11 w-11 place-items-center rounded-md border-2 border-[#3D2B1F] bg-[#F5E6C8] text-xl shadow-[3px_3px_0_#3D2B1F]"
               aria-label="清便便"
             >
-              💩
+              <PixelIcon name="poop" size="md" />
             </button>
           ) : null}
           <div className="relative z-10 grid min-h-72 place-items-center">
-            <div className={actionAnimation === "eating" ? "food-flight" : ""}>{actionAnimation === "eating" ? "🍱" : ""}</div>
+            <div className={actionAnimation === "eating" ? "food-flight" : ""}>
+              {actionAnimation === "eating" && flyingFood ? <PixelIcon name={flyingFood} size="lg" /> : null}
+            </div>
             <PetCanvas
               type={pet.type}
               color={pet.color}
@@ -241,29 +247,31 @@ export default function HomePage() {
           </button>
         ) : null}
 
-        <section className="mt-5 grid grid-cols-4 gap-2">
-          <ActionButton icon="🍱" label="餵食" onClick={() => setShowFood((value) => !value)} />
-          <ActionButton icon="🛁" label="洗澡" onClick={bath} disabled={!canBath(pet)} note={bathLeft ? formatCooldown(bathLeft) : ""} />
-          <ActionButton icon="💩" label="清潔" onClick={cleanPoop} disabled={!poopVisible} />
-          <ActionButton icon="🎾" label="玩耍" onClick={play} disabled={!canPlay(pet)} note={playLeft ? formatCooldown(playLeft) : ""} />
-        </section>
-
         {showFood ? (
-          <section className="mt-3 grid grid-cols-2 gap-2 rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] p-3 shadow-[4px_4px_0_#3D2B1F]">
+          <section className="mt-5 grid grid-cols-2 gap-2 rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] p-3 shadow-[4px_4px_0_#3D2B1F]">
             {FOODS.map((food) => (
               <button
                 key={food.id}
                 type="button"
-                onClick={() => feed(food.hungerBoost, food.label)}
-                className="rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] px-3 py-3 text-left font-black"
+                onClick={() => feed(food)}
+                className="flex items-center gap-3 rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] px-3 py-3 text-left font-black"
               >
-                <span className="mr-2">{food.icon}</span>
-                {food.label}
-                <span className="block text-xs text-[#8B6F5E]">飽足 +{food.hungerBoost}</span>
+                <PixelIcon name={food.icon} size="md" />
+                <span>
+                  {food.label}
+                  <span className="block text-xs text-[#8B6F5E]">飽足 +{food.hungerBoost}</span>
+                </span>
               </button>
             ))}
           </section>
         ) : null}
+
+        <section className="mt-5 grid grid-cols-4 gap-2">
+          <ActionButton icon="feed" label="餵食" onClick={() => setShowFood((value) => !value)} />
+          <ActionButton icon="bath" label="洗澡" onClick={bath} disabled={!canBath(pet)} note={bathLeft ? formatCooldown(bathLeft) : ""} />
+          <ActionButton icon="poop" label="清潔" onClick={cleanPoop} disabled={!poopVisible} />
+          <ActionButton icon="play" label="玩耍" onClick={play} disabled={!canPlay(pet)} note={playLeft ? formatCooldown(playLeft) : ""} />
+        </section>
       </div>
       <BottomNav />
     </main>
@@ -277,7 +285,7 @@ function ActionButton({
   disabled = false,
   note = ""
 }: {
-  icon: string;
+  icon: PixelIconName;
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -290,7 +298,9 @@ function ActionButton({
       disabled={disabled}
       className="min-h-24 rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-1 py-3 text-center font-black text-[#3D2B1F] shadow-[3px_3px_0_#3D2B1F] disabled:opacity-45"
     >
-      <span className="block text-2xl leading-none">{icon}</span>
+      <span className="grid place-items-center">
+        <PixelIcon name={icon} size="lg" />
+      </span>
       <span className="mt-2 block text-sm">{label}</span>
       {note ? <span className="mt-1 block text-[10px] leading-tight text-[#8B6F5E]">{note}</span> : null}
     </button>
