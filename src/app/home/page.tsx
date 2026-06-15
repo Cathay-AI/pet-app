@@ -91,6 +91,7 @@ export default function HomePage() {
   const pet = data.pet;
   const baseAnimation = getPetMoodState(pet);
   const animation = actionAnimation ?? baseAnimation;
+  const petCanWalk = !actionAnimation && !pet.isSick && animation !== "sleeping";
   const bathLeft = remainingCooldown(pet.lastBathAt, BATH_COOLDOWN_MS, now);
   const feedLeft = remainingCooldown(pet.lastFedAt, FEED_COOLDOWN_MS, now);
   const playLeft = remainingCooldown(pet.lastPlayAt, PLAY_COOLDOWN_MS, now);
@@ -238,33 +239,35 @@ export default function HomePage() {
             <button
               type="button"
               onClick={cleanPoop}
-              className="absolute bottom-8 left-8 z-10 grid h-11 w-11 place-items-center rounded-md border-2 border-[#3D2B1F] bg-[#F5E6C8] text-xl shadow-[3px_3px_0_#3D2B1F]"
+              className="absolute bottom-8 left-8 z-20 grid h-11 w-11 place-items-center rounded-md border-2 border-[#3D2B1F] bg-[#F5E6C8] text-xl shadow-[3px_3px_0_#3D2B1F]"
               aria-label="清便便"
             >
               <PixelIcon name="poop" size="md" />
             </button>
           ) : null}
-          <div className="relative z-10 grid min-h-72 place-items-center">
+          <div className="relative z-10 min-h-72">
             <div className={actionAnimation === "eating" ? "food-flight" : ""}>
               {actionAnimation === "eating" && flyingFood ? <PixelIcon name={flyingFood} size="lg" /> : null}
             </div>
-            <button
-              type="button"
-              onClick={play}
-              disabled={!canPlay(pet) || pet.isSick}
-              className="grid place-items-center rounded-md outline-none transition active:translate-y-1 disabled:cursor-default"
-              aria-label={`摸摸${pet.name}`}
-            >
-              <PetCanvas
-                type={pet.type}
-                color={pet.color}
-                animation={animation}
-                hunger={pet.hunger}
-                cleanliness={pet.cleanliness}
-                size={160}
-              />
-            </button>
-            <p className="rounded bg-[#FDF8F0] px-3 py-2 text-center text-sm font-black text-[#3D2B1F]">
+            <div className="pet-walk-area">
+              <button
+                type="button"
+                onClick={play}
+                disabled={!canPlay(pet) || pet.isSick}
+                className={`pet-walker ${petCanWalk ? "pet-walker-walk" : "pet-walker-rest"} rounded-md outline-none disabled:cursor-default`}
+                aria-label={`摸摸${pet.name}`}
+              >
+                <PetCanvas
+                  type={pet.type}
+                  color={pet.color}
+                  animation={animation}
+                  hunger={pet.hunger}
+                  cleanliness={pet.cleanliness}
+                  size={160}
+                />
+              </button>
+            </div>
+            <p className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded bg-[#FDF8F0] px-3 py-2 text-center text-sm font-black text-[#3D2B1F]">
               {message || petStatusText(pet)}
             </p>
           </div>
