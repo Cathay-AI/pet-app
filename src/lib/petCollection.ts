@@ -36,14 +36,6 @@ export function upsertPet(data: NekoData, pet: Pet): NekoData {
   });
 }
 
-export function setActivePet(data: NekoData, petId: string): NekoData {
-  return normalizeNekoData({
-    ...data,
-    activePetId: petId,
-    pet: data.pets.find((pet) => pet.id === petId) ?? data.pet
-  });
-}
-
 function mergeActivePet(pets: Pet[], activePet: Pet | null) {
   if (!activePet) return pets;
   const existingIndex = pets.findIndex((pet) => pet.id === activePet.id);
