@@ -38,6 +38,8 @@ export const DECAY_PER_HOUR = {
 export const BATH_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 export const FEED_COOLDOWN_MS = 45 * 60 * 1000;
 export const FEED_FULL_THRESHOLD = 85;
+export const HUNGER_ATTENTION_THRESHOLD = 45;
+export const HUNGER_DANGER_THRESHOLD = 20;
 export const PLAY_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 export const SICK_GRACE_MS = 2 * 60 * 60 * 1000;
 

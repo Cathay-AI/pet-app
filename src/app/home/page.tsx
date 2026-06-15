@@ -514,8 +514,8 @@ function getDeadlinePrompt(petName: string, deadline: CareDeadline) {
   switch (deadline.id) {
     case "hunger-low":
       return isNow
-        ? { title: `${petName} 餓了`, detail: "現在餵牠一口，牠會安心很多。" }
-        : { title: `${petName} 等一下會餓`, detail: "晚點回來餵牠，別讓牠空著肚子等太久。" };
+        ? { title: `${petName} 該吃飯了`, detail: "餵牠一口，牠會安心很多。" }
+        : { title: `${petName} 晚點會想吃`, detail: "晚點回來看牠，順手補一點吃的。" };
     case "poop":
       return isNow
         ? { title: "地板有點髒了", detail: "幫牠清一下，房間會舒服很多。" }

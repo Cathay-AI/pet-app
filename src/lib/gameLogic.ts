@@ -1,4 +1,11 @@
-import { BATH_COOLDOWN_MS, DECAY_PER_HOUR, PLAY_COOLDOWN_MS, SICK_GRACE_MS } from "@/lib/constants";
+import {
+  BATH_COOLDOWN_MS,
+  DECAY_PER_HOUR,
+  HUNGER_ATTENTION_THRESHOLD,
+  HUNGER_DANGER_THRESHOLD,
+  PLAY_COOLDOWN_MS,
+  SICK_GRACE_MS
+} from "@/lib/constants";
 import type { LeaderboardEntry, Pet, PetAnimation } from "@/types";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -71,7 +78,7 @@ export function getPetMoodState(pet: Pet): PetAnimation {
 export function petStatusText(pet: Pet) {
   if (pet.isSick) return `${pet.name} 生病了，需要治療`;
   if (pet.hunger === 0 || pet.cleanliness === 0 || pet.mood === 0) return `${pet.name} 很虛弱`;
-  if (pet.hunger < 20) return `${pet.name} 肚子很餓`;
+  if (pet.hunger < HUNGER_DANGER_THRESHOLD) return `${pet.name} 肚子很餓`;
   if (pet.cleanliness < 20) return `${pet.name} 需要洗香香`;
   if (pet.hunger < 40 || pet.cleanliness < 40 || pet.mood < 40) return `${pet.name} 有點難過`;
   if (pet.hunger > 70 && pet.cleanliness > 70 && pet.mood > 70) return `${pet.name} 很開心`;
@@ -122,9 +129,9 @@ export function getCareDeadlines(pet: Pet, now = new Date()): CareDeadline[] {
       label: "快餓了",
       detail: "回來餵牠",
       value: current.hunger,
-      threshold: 20,
+      threshold: HUNGER_ATTENTION_THRESHOLD,
       decayPerHour: DECAY_PER_HOUR.hunger,
-      severity: "critical",
+      severity: current.hunger <= HUNGER_DANGER_THRESHOLD ? "critical" : "watch",
       now
     }),
     deadlineForStat({
