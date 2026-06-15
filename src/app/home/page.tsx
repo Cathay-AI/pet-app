@@ -6,7 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
 import PixelIcon from "@/components/PixelIcon";
 import StatusBar from "@/components/StatusBar";
-import { BATH_COOLDOWN_MS, FOODS, PLAY_COOLDOWN_MS } from "@/lib/constants";
+import { BATH_COOLDOWN_MS, FEED_COOLDOWN_MS, FEED_FULL_THRESHOLD, FOODS, PLAY_COOLDOWN_MS } from "@/lib/constants";
 import {
   canBath,
   canPlay,
@@ -91,25 +91,36 @@ export default function HomePage() {
   const baseAnimation = getPetMoodState(pet);
   const animation = actionAnimation ?? baseAnimation;
   const bathLeft = remainingCooldown(pet.lastBathAt, BATH_COOLDOWN_MS, now);
+  const feedLeft = remainingCooldown(pet.lastFedAt, FEED_COOLDOWN_MS, now);
   const playLeft = remainingCooldown(pet.lastPlayAt, PLAY_COOLDOWN_MS, now);
+  const feedBlockedReason = getFeedBlockedReason(pet, feedLeft);
+  const canFeedNow = !feedBlockedReason;
   const poopVisible = needsPoopCleanup(pet);
   const deadlines = getCareDeadlines(pet, now);
   const nextDeadline = deadlines[0];
   const deadlinePrompt = getDeadlinePrompt(pet.name, nextDeadline);
   const recommendedAction = getRecommendedAction(nextDeadline, {
     bathLeft,
+    feedBlockedReason,
+    feedLeft,
     playLeft,
     poopVisible
   });
 
   function feed(food: Food) {
+    if (!canFeedNow) {
+      setMessage(feedBlockedReason);
+      setShowFood(false);
+      return;
+    }
     const actionNow = new Date();
     setFlyingFood(food.icon);
     updatePet(
       (current) => {
         const decayed = decayPet(current, actionNow);
+        const nextHunger = Math.min(FEED_FULL_THRESHOLD, decayed.hunger + food.hungerBoost);
         return {
-          ...carePet(decayed, { hunger: decayed.hunger + food.hungerBoost, mood: decayed.mood + 4 }, actionNow),
+          ...carePet(decayed, { hunger: nextHunger, mood: decayed.mood + (food.moodBoost ?? 4) }, actionNow),
           lastFedAt: actionNow.toISOString()
         };
       },
@@ -286,6 +297,11 @@ export default function HomePage() {
               <span className="mt-2 block text-xs font-black text-[#E8734A]">{recommendedAction.label}</span>
             </span>
           </button>
+          {feedLeft > 0 ? (
+            <p className="rounded bg-[#F5E6C8] px-3 py-2 text-xs font-black leading-tight text-[#8B6F5E]">
+              {pet.name} 還在慢慢吃，{formatCooldown(feedLeft)}後再餵會剛好。
+            </p>
+          ) : null}
           <StatusBar label="飽足" value={pet.hunger} color={pet.hunger < 30 ? "coral" : "mint"} />
           <StatusBar label="清潔" value={pet.cleanliness} color={pet.cleanliness < 30 ? "coral" : "mint"} />
           <StatusBar label="心情" value={pet.mood} color={pet.mood < 30 ? "coral" : "lavender"} />
@@ -303,17 +319,26 @@ export default function HomePage() {
 
         {showFood ? (
           <section className="mt-5 grid grid-cols-2 gap-2 rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] p-3 shadow-[4px_4px_0_#3D2B1F]">
+            {feedBlockedReason ? (
+              <p className="col-span-2 rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] px-3 py-2 text-xs font-black text-[#8B6F5E]">
+                {feedBlockedReason}
+              </p>
+            ) : null}
             {FOODS.map((food) => (
               <button
                 key={food.id}
                 type="button"
                 onClick={() => feed(food)}
-                className="flex items-center gap-3 rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] px-3 py-3 text-left font-black"
+                disabled={!canFeedNow}
+                className="flex items-center gap-3 rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] px-3 py-3 text-left font-black disabled:opacity-45"
               >
                 <PixelIcon name={food.icon} size="md" />
                 <span>
                   {food.label}
-                  <span className="block text-xs text-[#8B6F5E]">飽足 +{food.hungerBoost}</span>
+                  <span className="block text-xs text-[#8B6F5E]">
+                    飽足 +{food.hungerBoost}
+                    {food.moodBoost ? ` · 心情 +${food.moodBoost}` : ""}
+                  </span>
                 </span>
               </button>
             ))}
@@ -325,6 +350,8 @@ export default function HomePage() {
             icon="feed"
             label="餵食"
             onClick={() => setShowFood((value) => !value)}
+            disabled={!canFeedNow}
+            note={feedLeft ? formatCooldown(feedLeft) : pet.hunger >= FEED_FULL_THRESHOLD ? "晚點再餵" : ""}
             recommended={recommendedAction.id === "feed"}
           />
           <ActionButton
@@ -427,11 +454,17 @@ type RecommendedAction = {
 
 function getRecommendedAction(
   deadline: CareDeadline,
-  state: { bathLeft: number; playLeft: number; poopVisible: boolean }
+  state: { bathLeft: number; feedBlockedReason: string; feedLeft: number; playLeft: number; poopVisible: boolean }
 ): RecommendedAction {
   switch (deadline.id) {
     case "hunger-low":
-      return { id: "feed", icon: "feed", label: "準備餵食", disabled: false, disabledLabel: "" };
+      return {
+        id: "feed",
+        icon: "feed",
+        label: state.feedLeft > 0 ? "等牠吃完" : "準備餵食",
+        disabled: Boolean(state.feedBlockedReason),
+        disabledLabel: state.feedBlockedReason
+      };
     case "poop":
       return state.poopVisible
         ? { id: "clean", icon: "poop", label: "現在清潔", disabled: false, disabledLabel: "" }
@@ -455,6 +488,13 @@ function getRecommendedAction(
     case "sick":
       return { id: "treat", icon: "feed", label: "先治療", disabled: false, disabledLabel: "" };
   }
+}
+
+function getFeedBlockedReason(pet: Pet, feedLeft: number) {
+  if (pet.isSick) return `${pet.name} 先治療，再慢慢吃東西。`;
+  if (feedLeft > 0) return `${pet.name} 還在慢慢吃，${formatCooldown(feedLeft)}後再餵。`;
+  if (pet.hunger >= FEED_FULL_THRESHOLD) return `${pet.name} 現在還不餓，晚點再餵牠。`;
+  return "";
 }
 
 function getCareReaction(petName: string, action: "feed" | "bath" | "clean" | "play", foodLabel = "") {
