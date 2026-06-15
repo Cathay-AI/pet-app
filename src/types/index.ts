@@ -71,4 +71,5 @@ export type Food = {
   label: string;
   icon: PixelIconName;
   hungerBoost: number;
+  moodBoost?: number;
 };
