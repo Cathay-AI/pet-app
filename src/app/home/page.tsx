@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
@@ -27,14 +27,19 @@ import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
 import { upsertPet } from "@/lib/petCollection";
 import type { Food, NekoData, Pet, PetAnimation, PixelIconName } from "@/types";
 
+type StageEffect = "feed" | "bath" | "clean" | "play" | null;
+
 export default function HomePage() {
   const router = useRouter();
   const [data, setData] = useState<NekoData | null>(null);
   const [actionAnimation, setActionAnimation] = useState<PetAnimation | null>(null);
+  const [stageEffect, setStageEffect] = useState<StageEffect>(null);
+  const [effectSeed, setEffectSeed] = useState(0);
   const [showFood, setShowFood] = useState(false);
   const [flyingFood, setFlyingFood] = useState<PixelIconName | null>(null);
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(() => new Date());
+  const actionTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadCurrentNekoData().then((loaded) => {
@@ -66,7 +71,20 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [message]);
 
-  function updatePet(updater: (pet: Pet) => Pet, animate = true, nextAnimation: PetAnimation = "happy", nextMessage = "") {
+  useEffect(() => {
+    return () => {
+      if (actionTimerRef.current) window.clearTimeout(actionTimerRef.current);
+    };
+  }, []);
+
+  function updatePet(
+    updater: (pet: Pet) => Pet,
+    animate = true,
+    nextAnimation: PetAnimation = "happy",
+    nextMessage = "",
+    nextEffect: StageEffect = null,
+    durationMs = 1600
+  ) {
     setNow(new Date());
     setData((current) => {
       if (!current?.pet || !current.user) return current;
@@ -77,8 +95,15 @@ export default function HomePage() {
     });
     if (nextMessage) setMessage(nextMessage);
     if (animate) {
+      if (actionTimerRef.current) window.clearTimeout(actionTimerRef.current);
       setActionAnimation(nextAnimation);
-      window.setTimeout(() => setActionAnimation(null), 1300);
+      setStageEffect(nextEffect);
+      setEffectSeed((value) => value + 1);
+      actionTimerRef.current = window.setTimeout(() => {
+        setActionAnimation(null);
+        setStageEffect(null);
+        actionTimerRef.current = null;
+      }, durationMs);
     }
   }
 
@@ -131,9 +156,11 @@ export default function HomePage() {
       },
       true,
       "eating",
-      getCareReaction(pet.name, "feed", food.label)
+      getCareReaction(pet.name, "feed", food.label),
+      "feed",
+      1800
     );
-    window.setTimeout(() => setFlyingFood(null), 1300);
+    window.setTimeout(() => setFlyingFood(null), 1450);
     setShowFood(false);
   }
 
@@ -150,7 +177,9 @@ export default function HomePage() {
       },
       true,
       "bathing",
-      getCareReaction(pet.name, "bath")
+      getCareReaction(pet.name, "bath"),
+      "bath",
+      1900
     );
   }
 
@@ -164,7 +193,9 @@ export default function HomePage() {
       },
       true,
       "happy",
-      getCareReaction(pet.name, "clean")
+      getCareReaction(pet.name, "clean"),
+      "clean",
+      1700
     );
   }
 
@@ -181,7 +212,9 @@ export default function HomePage() {
       },
       true,
       "happy",
-      getCareReaction(pet.name, "play")
+      getCareReaction(pet.name, "play"),
+      "play",
+      1800
     );
   }
 
@@ -238,6 +271,7 @@ export default function HomePage() {
 
         <section className="relative overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-[#1A1A2E] p-5 shadow-[6px_6px_0_#3D2B1F]">
           <PixelRoom cleanliness={pet.cleanliness} hunger={pet.hunger} mood={pet.mood} />
+          <StageEffectOverlay key={effectSeed} effect={stageEffect} foodIcon={flyingFood} />
           {poopVisible && !pet.isSick ? (
             <button
               type="button"
@@ -270,7 +304,7 @@ export default function HomePage() {
                 />
               </button>
             </div>
-            <p className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded bg-[#FDF8F0] px-3 py-2 text-center text-sm font-black text-[#3D2B1F]">
+            <p className="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 rounded bg-[#FDF8F0] px-3 py-2 text-center text-sm font-black text-[#3D2B1F]">
               {message || petStatusText(pet)}
             </p>
           </div>
@@ -388,6 +422,53 @@ export default function HomePage() {
       </div>
       <BottomNav />
     </main>
+  );
+}
+
+function StageEffectOverlay({ effect, foodIcon }: { effect: StageEffect; foodIcon: PixelIconName | null }) {
+  if (!effect) return null;
+
+  return (
+    <div className={`stage-effect stage-effect-${effect}`} aria-hidden="true">
+      {effect === "feed" ? (
+        <>
+          <span className="stage-food-pop">{foodIcon ? <PixelIcon name={foodIcon} size="md" /> : null}</span>
+          <span className="stage-bite stage-bite-1" />
+          <span className="stage-bite stage-bite-2" />
+          <span className="stage-bite stage-bite-3" />
+          <span className="stage-bowl-shine" />
+        </>
+      ) : null}
+      {effect === "bath" ? (
+        <>
+          {Array.from({ length: 10 }).map((_, index) => (
+            <span key={`bubble-${index}`} className={`stage-bubble stage-bubble-${index + 1}`} />
+          ))}
+          <span className="stage-splash stage-splash-left" />
+          <span className="stage-splash stage-splash-right" />
+        </>
+      ) : null}
+      {effect === "clean" ? (
+        <>
+          <span className="stage-broom" />
+          <span className="stage-clean-swipe stage-clean-swipe-1" />
+          <span className="stage-clean-swipe stage-clean-swipe-2" />
+          <span className="stage-sparkle stage-sparkle-1" />
+          <span className="stage-sparkle stage-sparkle-2" />
+          <span className="stage-sparkle stage-sparkle-3" />
+        </>
+      ) : null}
+      {effect === "play" ? (
+        <>
+          <span className="stage-ball" />
+          <span className="stage-heart stage-heart-1" />
+          <span className="stage-heart stage-heart-2" />
+          <span className="stage-heart stage-heart-3" />
+          <span className="stage-jump-mark stage-jump-mark-1" />
+          <span className="stage-jump-mark stage-jump-mark-2" />
+        </>
+      ) : null}
+    </div>
   );
 }
 
