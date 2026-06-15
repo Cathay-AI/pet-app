@@ -117,43 +117,44 @@ function drawCat(
   animation: PetAnimation,
   frame: number
 ) {
+  const eating = animation === "eating";
+  const eatingDip = eating ? (frame % 8 < 4 ? 2 : 3) : 0;
+  const bodyY = y + (eating ? 1 : 0);
+  const headY = y + eatingDip;
   const blink = animation === "idle" && frame % 16 === 10;
   const happySquash = animation === "happy" && frame % 8 >= 4 ? 1 : 0;
   const earTwitch = !sad && animation === "idle" && frame % 16 === 6 ? -1 : 0;
-  const tailLift = animation === "happy" ? -2 : sad ? 3 : frame % 8 < 4 ? -1 : 0;
+  const tailLift = eating ? 1 : animation === "happy" ? -2 : sad ? 3 : frame % 8 < 4 ? -1 : 0;
 
-  px(ctx, 9, 9 + y, 14, 13, palette.fur);
-  px(ctx, 7, 12 + y + happySquash, 18, 8, palette.fur);
-  px(ctx, 10, 6 + y + (sad ? 2 : earTwitch), 4, 5, sad ? palette.shade : palette.fur);
-  px(ctx, 18, 6 + y + (sad ? 2 : 0), 4, 5, sad ? palette.shade : palette.fur);
+  px(ctx, 7, 12 + bodyY + happySquash, 18, 8, palette.fur);
+  px(ctx, 9, 9 + headY, 14, 13, palette.fur);
+  px(ctx, 10, 6 + headY + (sad ? 2 : earTwitch), 4, 5, sad ? palette.shade : palette.fur);
+  px(ctx, 18, 6 + headY + (sad ? 2 : 0), 4, 5, sad ? palette.shade : palette.fur);
   if (!sad) {
-    px(ctx, 11, 7 + y + earTwitch, 2, 2, palette.accent);
-    px(ctx, 19, 7 + y, 2, 2, palette.accent);
+    px(ctx, 11, 7 + headY + earTwitch, 2, 2, palette.accent);
+    px(ctx, 19, 7 + headY, 2, 2, palette.accent);
   }
-  if (blink) {
-    px(ctx, 11, 15 + y, 3, 1, "#251B18");
-    px(ctx, 18, 15 + y, 3, 1, "#251B18");
-  } else if (sad) {
-    px(ctx, 11, 15 + y, 3, 1, "#251B18");
-    px(ctx, 18, 15 + y, 3, 1, "#251B18");
+  if (blink || sad || eating) {
+    px(ctx, 11, 15 + headY, 3, 1, "#251B18");
+    px(ctx, 18, 15 + headY, 3, 1, "#251B18");
   } else {
-    px(ctx, 11, 14 + y, 3, 3, "#251B18");
-    px(ctx, 18, 14 + y, 3, 3, "#251B18");
+    px(ctx, 11, 14 + headY, 3, 3, "#251B18");
+    px(ctx, 18, 14 + headY, 3, 3, "#251B18");
   }
-  px(ctx, 15, 17 + y, 2, 1, "#251B18");
-  if (animation === "eating") {
-    const chewOpen = frame % 4 < 2;
-    px(ctx, 13, 19 + y, 7, chewOpen ? 3 : 1, chewOpen ? "#FFFFFF" : palette.accent);
-    if (chewOpen) px(ctx, 15, 20 + y, 2, 1, "#251B18");
+  px(ctx, 15, 17 + headY, 2, 1, "#251B18");
+  if (eating) {
+    px(ctx, 13, 19 + headY, 7, 1, palette.accent);
+    if (frame % 8 >= 4) px(ctx, 16, 20 + headY, 2, 1, "#251B18");
   } else {
-    px(ctx, 12, 19 + y, 8, 2, palette.accent);
+    px(ctx, 12, 19 + headY, 8, 2, palette.accent);
   }
-  px(ctx, 8, 20 + y, 4, 5, palette.fur);
-  px(ctx, 20, 20 + y, 4, 5, palette.fur);
-  px(ctx, 5, 15 + y, 3, 2, palette.shade);
-  px(ctx, 24, 15 + y, 3, 2, palette.shade);
-  px(ctx, 24, 20 + y + tailLift, 3, 2, palette.fur);
-  px(ctx, 26, 18 + y + tailLift, 2, 2, palette.fur);
+  px(ctx, 8, 20 + bodyY, 4, 5, palette.fur);
+  px(ctx, 20, 20 + bodyY, 4, 5, palette.fur);
+  px(ctx, 5, 15 + bodyY, 3, 2, palette.shade);
+  px(ctx, 24, 15 + bodyY, 3, 2, palette.shade);
+  px(ctx, 24, 20 + bodyY + tailLift, 3, 2, palette.fur);
+  px(ctx, 26, 18 + bodyY + tailLift, 2, 2, palette.fur);
+  if (eating) drawFoodBowl(ctx, frame);
   if (animation === "happy" && frame % 8 >= 4) px(ctx, 10, 23 + y, 12, 1, palette.shade);
 }
 
@@ -165,36 +166,37 @@ function drawDog(
   animation: PetAnimation,
   frame: number
 ) {
+  const eating = animation === "eating";
+  const eatingDip = eating ? (frame % 8 < 4 ? 2 : 3) : 0;
+  const bodyY = y + (eating ? 1 : 0);
+  const headY = y + eatingDip;
   const blink = animation === "idle" && frame % 16 === 11;
   const earWag = animation === "happy" ? frame % 4 < 2 ? -1 : 1 : 0;
-  const tailWag = animation === "happy" ? frame % 4 < 2 ? -2 : 1 : sad ? 2 : frame % 8 < 4 ? -1 : 0;
+  const tailWag = eating ? 1 : animation === "happy" ? frame % 4 < 2 ? -2 : 1 : sad ? 2 : frame % 8 < 4 ? -1 : 0;
 
-  px(ctx, 8, 11 + y, 16, 12, palette.fur);
-  px(ctx, 6, 14 + y, 20, 7, palette.fur);
-  px(ctx, 6, 9 + y + (sad ? 2 : earWag), 5, 7, sad ? palette.shade : palette.fur);
-  px(ctx, 21, 9 + y + (sad ? 2 : -earWag), 5, 7, sad ? palette.shade : palette.fur);
-  if (blink) {
-    px(ctx, 11, 16 + y, 3, 1, "#251B18");
-    px(ctx, 18, 16 + y, 3, 1, "#251B18");
-  } else if (sad) {
-    px(ctx, 11, 16 + y, 3, 1, "#251B18");
-    px(ctx, 18, 16 + y, 3, 1, "#251B18");
+  px(ctx, 6, 14 + bodyY, 20, 7, palette.fur);
+  px(ctx, 8, 11 + headY, 16, 12, palette.fur);
+  px(ctx, 6, 9 + headY + (sad ? 2 : earWag), 5, 7, sad ? palette.shade : palette.fur);
+  px(ctx, 21, 9 + headY + (sad ? 2 : -earWag), 5, 7, sad ? palette.shade : palette.fur);
+  if (blink || sad || eating) {
+    px(ctx, 11, 16 + headY, 3, 1, "#251B18");
+    px(ctx, 18, 16 + headY, 3, 1, "#251B18");
   } else {
-    px(ctx, 11, 15 + y, 3, 3, "#251B18");
-    px(ctx, 18, 15 + y, 3, 3, "#251B18");
+    px(ctx, 11, 15 + headY, 3, 3, "#251B18");
+    px(ctx, 18, 15 + headY, 3, 3, "#251B18");
   }
-  px(ctx, 14, 18 + y, 4, 2, palette.shade);
-  if (animation === "eating") {
-    const chewOpen = frame % 4 < 2;
-    px(ctx, 13, 20 + y, 6, chewOpen ? 3 : 1, chewOpen ? "#FFFFFF" : palette.accent);
-    if (chewOpen) px(ctx, 15, 21 + y, 2, 1, "#251B18");
+  px(ctx, 14, 18 + headY, 4, 2, palette.shade);
+  if (eating) {
+    px(ctx, 13, 20 + headY, 6, 1, palette.accent);
+    if (frame % 8 >= 4) px(ctx, 15, 21 + headY, 2, 1, "#251B18");
   } else {
-    px(ctx, 13, 20 + y, 6, 2, palette.accent);
+    px(ctx, 13, 20 + headY, 6, 2, palette.accent);
   }
-  px(ctx, 7, 22 + y, 4, 4, palette.fur);
-  px(ctx, 21, 22 + y, 4, 4, palette.fur);
-  px(ctx, 25, 13 + y, 3, 3, palette.shade);
-  px(ctx, 27, 10 + y + tailWag, 2, 4, palette.shade);
+  px(ctx, 7, 22 + bodyY, 4, 4, palette.fur);
+  px(ctx, 21, 22 + bodyY, 4, 4, palette.fur);
+  px(ctx, 25, 13 + bodyY, 3, 3, palette.shade);
+  px(ctx, 27, 10 + bodyY + tailWag, 2, 4, palette.shade);
+  if (eating) drawFoodBowl(ctx, frame);
   if (animation === "happy" && frame % 8 >= 4) px(ctx, 9, 25 + y, 14, 1, palette.shade);
 }
 
@@ -259,11 +261,21 @@ function drawSleep(ctx: CanvasRenderingContext2D, frame: number) {
   px(ctx, 23, 8 - (frame % 2), 4, 1, "#FFFFFF");
 }
 
+function drawFoodBowl(ctx: CanvasRenderingContext2D, frame: number) {
+  const nibble = frame % 8 < 4 ? 0 : 1;
+  px(ctx, 10, 26, 12, 3, "#251B18");
+  px(ctx, 11, 25, 10, 3, "#D4A96A");
+  px(ctx, 12, 24, 8, 2, "#F5E6C8");
+  px(ctx, 13, 24 - nibble, 6, 1, "#F7D46A");
+  px(ctx, 14, 25, 4, 1, "#E8734A");
+  px(ctx, 12, 28, 8, 1, "#6F452D");
+}
+
 function drawCrumbs(ctx: CanvasRenderingContext2D, frame: number) {
   const drift = frame % 4;
-  px(ctx, 13 - drift, 22, 1, 1, "#F7D46A");
-  if (frame % 2 === 0) px(ctx, 21 + drift, 21, 1, 1, "#F7D46A");
-  if (frame % 3 === 0) px(ctx, 16, 24, 1, 1, "#D4A96A");
+  px(ctx, 12 + drift, 24, 1, 1, "#F7D46A");
+  if (frame % 2 === 0) px(ctx, 19 - drift, 24, 1, 1, "#F7D46A");
+  if (frame % 3 === 0) px(ctx, 16, 23, 1, 1, "#D4A96A");
 }
 
 function drawDust(ctx: CanvasRenderingContext2D, frame: number) {

@@ -72,40 +72,40 @@ button:disabled {
 .stage-food-pop {
   animation: stage-food-pop 1.35s steps(7, end) both;
   left: 3.5rem;
-  top: 4.4rem;
+  top: 4.8rem;
 }
 
 .stage-bite {
   animation: stage-bite 1.2s steps(5, end) both;
   background: #f7d46a;
-  height: 5px;
-  width: 5px;
+  height: 4px;
+  width: 4px;
 }
 
 .stage-bite-1 {
-  left: 47%;
-  top: 54%;
+  bottom: 4.6rem;
+  left: 46%;
 }
 
 .stage-bite-2 {
   animation-delay: 110ms;
-  left: 55%;
-  top: 58%;
+  bottom: 4.9rem;
+  left: 52%;
 }
 
 .stage-bite-3 {
   animation-delay: 210ms;
-  left: 43%;
-  top: 62%;
+  bottom: 4.2rem;
+  left: 49%;
 }
 
 .stage-bowl-shine {
   animation: stage-bowl-shine 1.35s steps(4, end) both;
   background: #fdf8f0;
-  bottom: 1.9rem;
+  bottom: 4.35rem;
   height: 4px;
-  left: 3.4rem;
-  width: 4.5rem;
+  left: 44%;
+  width: 3.8rem;
 }
 
 .stage-bubble {
@@ -555,11 +555,11 @@ button:disabled {
   }
   65% {
     opacity: 1;
-    transform: translate(82px, 72px) scale(0.55);
+    transform: translate(152px, 112px) scale(0.58);
   }
   100% {
     opacity: 0;
-    transform: translate(104px, 78px) scale(0.25);
+    transform: translate(170px, 120px) scale(0.25);
   }
 }
 
@@ -574,11 +574,11 @@ button:disabled {
   }
   72% {
     opacity: 1;
-    transform: translate(84px, 76px) scale(0.45);
+    transform: translate(146px, 108px) scale(0.48);
   }
   100% {
     opacity: 0;
-    transform: translate(98px, 78px) scale(0.25);
+    transform: translate(160px, 116px) scale(0.25);
   }
 }
 
@@ -590,11 +590,11 @@ button:disabled {
   }
   55% {
     opacity: 1;
-    transform: translate(2px, -5px);
+    transform: translate(1px, -4px);
   }
   100% {
     opacity: 0;
-    transform: translate(8px, 8px);
+    transform: translate(5px, 5px);
   }
 }
 
