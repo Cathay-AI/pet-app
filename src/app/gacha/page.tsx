@@ -6,8 +6,9 @@ import AuthStatus from "@/components/AuthStatus";
 import PetCanvas from "@/components/PetCanvas";
 import { COLOR_OPTIONS, PET_COLORS } from "@/lib/constants";
 import { createId } from "@/lib/gameLogic";
-import { getAuthState, saveCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
-import type { Pet, PetColorId, PetType, User } from "@/types";
+import { loadCurrentNekoData, saveCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
+import { normalizeNekoData, upsertPet } from "@/lib/petCollection";
+import type { NekoData, Pet, PetColorId, PetType, User } from "@/types";
 
 export default function GachaPage() {
   const router = useRouter();
@@ -17,16 +18,23 @@ export default function GachaPage() {
   const [petName, setPetName] = useState("");
   const [username, setUsername] = useState("");
   const [auth, setAuth] = useState<AuthState | null>(null);
+  const [currentData, setCurrentData] = useState<NekoData | null>(null);
 
   useEffect(() => {
-    getAuthState().then(setAuth);
+    loadCurrentNekoData().then((loaded) => {
+      setAuth(loaded.auth);
+      setCurrentData(loaded.data);
+      if (loaded.data.user) setUsername(loaded.data.user.username);
+    });
   }, []);
+
+  const hasExistingPet = Boolean(currentData?.user && currentData.pet);
 
   const title = useMemo(() => {
     if (isDrawing) return "籤筒搖晃中";
-    if (result) return result === "cat" ? "你抽到貓咪" : "你抽到狗狗";
-    return "抽出你的像素寵物";
-  }, [isDrawing, result]);
+    if (result) return result === "cat" ? "新貓咪出現了" : "新狗狗出現了";
+    return hasExistingPet ? "抽一位新室友" : "抽出你的像素寵物";
+  }, [hasExistingPet, isDrawing, result]);
 
   function drawPet() {
     setIsDrawing(true);
@@ -38,14 +46,17 @@ export default function GachaPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!result || !petName.trim() || !username.trim()) return;
+    if (!result || !petName.trim() || (!currentData?.user && !username.trim())) return;
 
     const now = new Date().toISOString();
-    const user: User = {
-      id: auth?.userId ?? createId("user"),
-      username: username.trim(),
-      createdAt: now
-    };
+    const existingUser = currentData?.user;
+    const user: User = existingUser
+      ? { ...existingUser, id: auth?.userId ?? existingUser.id }
+      : {
+          id: auth?.userId ?? createId("user"),
+          username: username.trim(),
+          createdAt: now
+        };
     const pet: Pet = {
       id: createId("pet"),
       userId: user.id,
@@ -63,7 +74,8 @@ export default function GachaPage() {
       updatedAt: now
     };
 
-    await saveCurrentNekoData({ version: 1, user, pet });
+    const baseData = normalizeNekoData(currentData ?? { version: 1, user, pets: [], activePetId: null, pet: null });
+    await saveCurrentNekoData(upsertPet({ ...baseData, user }, pet));
     router.replace("/home");
   }
 
@@ -75,6 +87,11 @@ export default function GachaPage() {
             <AuthStatus auth={auth} mode="dark" />
           </div>
           <h1 className="text-2xl font-black">{title}</h1>
+          {hasExistingPet ? (
+            <p className="mt-2 text-xs font-black text-[#D4A96A]">
+              {currentData?.user?.username} 的寵物匣已有 {currentData?.pets.length ?? 1} 位朋友
+            </p>
+          ) : null}
           <div className="my-8 grid place-items-center">
             {result ? (
               <div className="rounded-md bg-[#1A1A2E] p-6 shadow-[inset_0_0_0_4px_#2E2E52]">
@@ -128,22 +145,29 @@ export default function GachaPage() {
                   placeholder="Kiki"
                 />
               </label>
-              <label className="block text-sm font-black">
-                你的名稱
-                <input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  maxLength={12}
-                  className="mt-2 w-full rounded-md border-4 border-[#3D2B1F] bg-[#FDF8F0] px-4 py-3 text-[#3D2B1F] outline-none focus:border-[#E8734A]"
-                  placeholder="Jason"
-                />
-              </label>
+              {currentData?.user ? (
+                <div className="rounded-md border-4 border-[#3D2B1F] bg-[#F5E6C8] px-4 py-3 text-[#3D2B1F]">
+                  <p className="text-xs font-black text-[#8B6F5E]">飼主</p>
+                  <p className="font-black">{currentData.user.username}</p>
+                </div>
+              ) : (
+                <label className="block text-sm font-black">
+                  你的名稱
+                  <input
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    maxLength={12}
+                    className="mt-2 w-full rounded-md border-4 border-[#3D2B1F] bg-[#FDF8F0] px-4 py-3 text-[#3D2B1F] outline-none focus:border-[#E8734A]"
+                    placeholder="Jason"
+                  />
+                </label>
+              )}
               <button
                 type="submit"
-                disabled={!petName.trim() || !username.trim()}
+                disabled={!petName.trim() || (!currentData?.user && !username.trim())}
                 className="w-full rounded-md border-4 border-[#FDF8F0] bg-[#E8734A] px-5 py-4 text-lg font-black text-white shadow-[4px_4px_0_#3D2B1F] disabled:opacity-60"
               >
-                出發！
+                {hasExistingPet ? "帶牠回家！" : "出發！"}
               </button>
             </form>
           )}

@@ -3,6 +3,8 @@ import type { Food, LeaderboardEntry, NekoData, PetColorId } from "@/types";
 export const initialNekoData: NekoData = {
   version: 1,
   user: null,
+  pets: [],
+  activePetId: null,
   pet: null
 };
 
