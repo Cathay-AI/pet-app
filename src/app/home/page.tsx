@@ -23,7 +23,7 @@ import {
   petStatusText,
   remainingCooldown
 } from "@/lib/gameLogic";
-import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
+import { loadCurrentNekoData, logCareEvent, saveCurrentNekoData } from "@/lib/nekoRepository";
 import { upsertPet } from "@/lib/petCollection";
 import type { Food, NekoData, Pet, PetAnimation, PixelIconName } from "@/types";
 
@@ -162,6 +162,7 @@ export default function HomePage() {
     );
     window.setTimeout(() => setFlyingFood(null), 1450);
     setShowFood(false);
+    void logCareEvent(pet.id, "feed", { food: food.id });
   }
 
   function bath() {
@@ -181,6 +182,7 @@ export default function HomePage() {
       "bath",
       1900
     );
+    void logCareEvent(pet.id, "bath");
   }
 
   function cleanPoop() {
@@ -197,6 +199,7 @@ export default function HomePage() {
       "clean",
       1700
     );
+    void logCareEvent(pet.id, "clean");
   }
 
   function play() {
@@ -216,6 +219,7 @@ export default function HomePage() {
       "play",
       1800
     );
+    void logCareEvent(pet.id, "play");
   }
 
   function runRecommendedAction() {
@@ -253,6 +257,7 @@ export default function HomePage() {
       "happy",
       `${pet.name} 恢復精神了`
     );
+    void logCareEvent(pet.id, "treat");
   }
 
   return (

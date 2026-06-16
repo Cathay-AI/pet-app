@@ -121,6 +121,16 @@ const pixels: Record<PixelIconName, string[]> = {
     ".yyyyy..",
     "..kkk...",
     "........"
+  ],
+  stats: [
+    "........",
+    ".g...g..",
+    ".g..gg..",
+    ".g..gg..",
+    ".g.ggg..",
+    ".g.ggg..",
+    ".gggggg.",
+    "........"
   ]
 };
 

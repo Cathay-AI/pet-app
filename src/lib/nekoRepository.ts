@@ -275,3 +275,43 @@ function latestCareAt(pet: Pick<Pet, "lastFedAt" | "lastBathAt" | "lastPlayAt" |
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 }
+
+export type CareEventType = "feed" | "bath" | "clean" | "play" | "treat";
+
+export async function logCareEvent(
+  petId: string,
+  type: CareEventType,
+  metadata: Record<string, unknown> = {}
+) {
+  const auth = await getAuthState();
+  if (!auth.isConfigured || !auth.userId) return;
+
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return;
+
+  await supabase.from("care_events").insert({
+    pet_id: petId,
+    user_id: auth.userId,
+    type,
+    metadata
+  });
+}
+
+export type CareStats = {
+  totalEvents: number;
+  uniqueUsers: number;
+  avgEventsPerUser: number;
+  byType: { type: string; count: number }[];
+};
+
+export async function loadCareStats(date?: string): Promise<CareStats | null> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return null;
+
+  const targetDate = date ?? new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase.rpc("get_care_stats", { target_date: targetDate });
+  if (error || !data) return null;
+
+  return data as CareStats;
+}

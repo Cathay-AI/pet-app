@@ -7,7 +7,8 @@ import type { PixelIconName } from "@/types";
 
 const tabs: { href: string; label: string; icon: PixelIconName }[] = [
   { href: "/home", label: "首頁", icon: "home" },
-  { href: "/leaderboard", label: "排行", icon: "rank" }
+  { href: "/leaderboard", label: "排行", icon: "rank" },
+  { href: "/analytics", label: "統計", icon: "stats" }
 ];
 
 export default function BottomNav() {
@@ -15,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t-4 border-[#3D2B1F] bg-[#FDF8F0] px-4 py-2">
-      <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
+      <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
         {tabs.map((tab) => {
           const active = pathname === tab.href;
           return (
