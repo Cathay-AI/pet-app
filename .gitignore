@@ -11,3 +11,6 @@ yarn-error.log*
 pnpm-debug.log*
 output
 .playwright-cli
+backend/.venv
+backend/.pytest_cache
+GEMINI.md

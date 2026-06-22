@@ -23,8 +23,15 @@ export default function PublicRoomPage() {
     let isMounted = true;
 
     loadCurrentNekoData()
-      .then((loaded) => loadPublicRoom(petId, loaded.data))
+      .then((loaded) => {
+        if (loaded.auth.isConfigured && !loaded.auth.userId) {
+          router.replace("/login");
+          return null;
+        }
+        return loadPublicRoom(petId, loaded.data);
+      })
       .then((room) => {
+        if (room === null) return;
         if (!isMounted) return;
         setEntry(room);
         setIsLoading(false);
@@ -33,7 +40,7 @@ export default function PublicRoomPage() {
     return () => {
       isMounted = false;
     };
-  }, [petId]);
+  }, [petId, router]);
 
   if (isLoading) {
     return (

@@ -44,6 +44,15 @@ async def test_register_duplicate_email(client: AsyncClient):
     assert "already registered" in resp.json()["detail"]
 
 
+async def test_register_duplicate_username(client: AsyncClient):
+    await register(client)
+    # Register another email but same username
+    payload = {**VALID_USER, "email": "other@example.com"}
+    resp = await client.post(f"{BASE}/register", json=payload)
+    assert resp.status_code == 409
+    assert "Username already registered" in resp.json()["detail"]
+
+
 async def test_register_weak_password_no_digit(client: AsyncClient):
     payload = {**VALID_USER, "password": "NoDigitPass"}
     resp = await client.post(f"{BASE}/register", json=payload)
@@ -166,3 +175,52 @@ async def test_me_no_token(client: AsyncClient):
 async def test_me_invalid_token(client: AsyncClient):
     resp = await client.get(f"{BASE}/me", headers={"Authorization": "Bearer invalid.token"})
     assert resp.status_code == 401
+
+
+# ─── Password Reset ───────────────────────────────────────────────────────────
+
+async def test_forgot_password_success(client: AsyncClient):
+    await register(client)
+    resp = await client.post(f"{BASE}/forgot-password", json={"email": VALID_USER["email"]})
+    assert resp.status_code == 200
+    assert "密碼重設連結已發送" in resp.json()["message"]
+
+
+async def test_forgot_password_unknown_email(client: AsyncClient):
+    resp = await client.post(f"{BASE}/forgot-password", json={"email": "notfound@example.com"})
+    assert resp.status_code == 404
+    assert "Email not found" in resp.json()["detail"]
+
+
+async def test_reset_password_success(client: AsyncClient):
+    data = await register(client)
+    user_id = data["user"]["id"]
+
+    # Generate a valid reset token directly using the security helper
+    from app.core.security import create_reset_password_token
+    token = create_reset_password_token(user_id)
+
+    # Use the token to reset the password
+    resp = await client.post(
+        f"{BASE}/reset-password",
+        json={"token": token, "new_password": "NewPassword123"}
+    )
+    assert resp.status_code == 200
+    assert "密碼已重設成功" in resp.json()["message"]
+
+    # Verify we can login with the new password
+    login_resp = await client.post(
+        f"{BASE}/login",
+        json={"email": VALID_USER["email"], "password": "NewPassword123"}
+    )
+    assert login_resp.status_code == 200
+    assert "access_token" in login_resp.json()
+
+
+async def test_reset_password_invalid_token(client: AsyncClient):
+    resp = await client.post(
+        f"{BASE}/reset-password",
+        json={"token": "invalid.reset.token", "new_password": "NewPassword123"}
+    )
+    assert resp.status_code == 400
+

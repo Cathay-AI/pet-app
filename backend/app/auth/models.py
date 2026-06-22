@@ -1,39 +1,59 @@
+from __future__ import annotations
+
+"""
+Auth domain ORM models.
+
+With Supabase Auth, we no longer manage passwords or refresh tokens.
+Instead we maintain a public.profiles table that mirrors auth.users (1:1).
+"""
+
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
+if TYPE_CHECKING:
+    from app.pets.models import Pet
+    from app.users.models import Friendship
 
-class User(Base):
+
+class Profile(Base):
     """
-    Application user account.
+    User profile — mirrors auth.users (1:1 relationship via shared UUID PK).
+
+    Created by the app on first login (after Supabase Auth creates the auth.users row).
 
     Columns
     -------
-    id              UUID primary key, generated server-side.
-    email           Unique login identifier.
-    username        Display name shown in the leaderboard (1-24 chars).
-    hashed_password Bcrypt hash of the user's password.
-    is_active       Soft-disable flag; inactive users cannot log in.
-    is_verified     True after the user confirms their e-mail (future use).
-    created_at      Row creation timestamp (UTC).
-    updated_at      Last modification timestamp (UTC).
+    id           UUID — same as auth.users.id (FK managed by Supabase).
+    username     Display name shown in the app (1-24 chars).
+    friend_code  Unique NEKO-XXXX code for adding friends.
+    avatar       Optional avatar identifier string.
+    bio          Optional short bio (max 160 chars).
+    created_at   Row creation timestamp (UTC).
+    updated_at   Last modification timestamp (UTC).
     """
 
-    __tablename__ = "users"
+    __tablename__ = "profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True
+        # No default — must equal auth.users.id, set explicitly on insert
     )
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    username: Mapped[str] = mapped_column(String(24), nullable=False)
-    hashed_password: Mapped[str] = mapped_column(Text, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    username: Mapped[str] = mapped_column(
+        String(24), nullable=False, index=True
+    )
+    friend_code: Mapped[Optional[str]] = mapped_column(
+        String(12), unique=True, nullable=True, index=True
+    )
+    avatar: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
@@ -44,41 +64,19 @@ class User(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
-        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    # ── Relationships ─────────────────────────────────────────────────────────
+    pet: Mapped[Optional["Pet"]] = relationship(
+        "Pet", back_populates="user", cascade="all, delete-orphan", uselist=False
     )
-
-
-class RefreshToken(Base):
-    """
-    Persisted refresh tokens for session revocation.
-
-    Columns
-    -------
-    id          UUID primary key.
-    user_id     FK → users.id (cascade delete).
-    token       The raw JWT string (indexed for fast lookup).
-    expires_at  Token expiry for DB-level queries.
-    revoked     True after logout or token rotation.
-    created_at  Issuance timestamp.
-    """
-
-    __tablename__ = "refresh_tokens"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    sent_requests: Mapped[list["Friendship"]] = relationship(
+        "Friendship",
+        foreign_keys="Friendship.requester_id",
+        back_populates="requester",
+        cascade="all, delete-orphan",
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+    received_requests: Mapped[list["Friendship"]] = relationship(
+        "Friendship",
+        foreign_keys="Friendship.addressee_id",
+        back_populates="addressee",
+        cascade="all, delete-orphan",
     )
-    token: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-
-    user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
