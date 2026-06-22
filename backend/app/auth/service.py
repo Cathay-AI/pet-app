@@ -1,169 +1,97 @@
-from datetime import datetime, timezone
+"""
+Auth service — profile management after Supabase authentication.
 
-from jose import JWTError
+Supabase handles all authentication (login, register, token issuance,
+Google OAuth, etc.). This service is responsible for:
+- Creating a profile row in public.profiles after first Supabase sign-in.
+- Generating and ensuring unique friend codes.
+"""
+from __future__ import annotations
+
+import random
+import string
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import RefreshToken, User
-from app.auth.schemas import LoginRequest, RegisterRequest
-from app.core.security import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    hash_password,
-    verify_password,
-)
+from app.auth.models import Profile
 
 
 class AuthService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    # ─── Register ─────────────────────────────────────────────────────────────
+    # ─── Friend code ───────────────────────────────────────────────────────
 
-    async def register(self, payload: RegisterRequest) -> tuple[User, str, str]:
+    @staticmethod
+    def _generate_friend_code() -> str:
+        """Generate a NEKO-XXXX code (4 uppercase alphanumerics)."""
+        chars = string.ascii_uppercase + string.digits
+        suffix = "".join(random.choices(chars, k=4))
+        return f"NEKO-{suffix}"
+
+    async def _unique_friend_code(self) -> str:
+        """Keep generating until we get one that isn't taken."""
+        for _ in range(20):
+            code = self._generate_friend_code()
+            exists = await self.db.scalar(
+                select(Profile).where(Profile.friend_code == code)
+            )
+            if not exists:
+                return code
+        raise RuntimeError("Could not generate a unique friend code")
+
+    # ─── Profile creation (called after first Supabase login) ──────────────
+
+    async def get_or_create_profile(
+        self,
+        supabase_user_id: uuid.UUID,
+        email: str,
+        username: str | None = None,
+    ) -> tuple[Profile, bool]:
         """
-        Create a new user account.
+        Return the existing profile, or create one on first login.
+
+        Parameters
+        ----------
+        supabase_user_id  The UUID from auth.users (= Supabase JWT sub).
+        email             User's email (used to derive a default username).
+        username          Optional explicit username; falls back to email prefix.
 
         Returns
         -------
-        (user, access_token, refresh_token)
-
-        Raises
-        ------
-        ValueError  if the e-mail is already registered.
+        (profile, created)  where `created` is True if a new row was inserted.
         """
-        existing = await self.db.scalar(select(User).where(User.email == payload.email))
+        existing = await self.db.get(Profile, supabase_user_id)
         if existing:
-            raise ValueError("Email already registered")
+            return existing, False
 
-        user = User(
-            email=payload.email,
-            username=payload.username,
-            hashed_password=hash_password(payload.password),
+        # Derive a username from email/metadata, fall back to "Neko" if empty
+        if username:
+            display_name = username
+        elif email and "@" in email:
+            display_name = email.split("@")[0][:24]
+        else:
+            display_name = "Neko"
+
+        # Ensure username uniqueness by appending a suffix if needed
+        base_name = display_name
+        suffix = 0
+        while await self.db.scalar(
+            select(Profile).where(Profile.username == display_name)
+        ):
+            suffix += 1
+            display_name = f"{base_name[:20]}_{suffix}"
+
+        friend_code = await self._unique_friend_code()
+
+        profile = Profile(
+            id=supabase_user_id,
+            username=display_name,
+            friend_code=friend_code,
         )
-        self.db.add(user)
-        await self.db.flush()  # get user.id before commit
-
-        access_token, refresh_token = await self._issue_tokens(user)
+        self.db.add(profile)
         await self.db.commit()
-        await self.db.refresh(user)
-        return user, access_token, refresh_token
-
-    # ─── Login ────────────────────────────────────────────────────────────────
-
-    async def login(self, payload: LoginRequest) -> tuple[User, str, str]:
-        """
-        Authenticate with email + password.
-
-        Returns
-        -------
-        (user, access_token, refresh_token)
-
-        Raises
-        ------
-        ValueError  if credentials are invalid or account is inactive.
-        """
-        user = await self.db.scalar(select(User).where(User.email == payload.email))
-        if not user or not verify_password(payload.password, user.hashed_password):
-            raise ValueError("Invalid email or password")
-        if not user.is_active:
-            raise ValueError("Account is disabled")
-
-        access_token, refresh_token = await self._issue_tokens(user)
-        await self.db.commit()
-        return user, access_token, refresh_token
-
-    # ─── Refresh ──────────────────────────────────────────────────────────────
-
-    async def refresh(self, raw_token: str) -> tuple[User, str, str]:
-        """
-        Exchange a valid refresh token for a new token pair (rotation).
-
-        The old refresh token is revoked immediately; a new one is issued.
-
-        Raises
-        ------
-        ValueError  if the token is invalid, expired, revoked, or the user
-                    no longer exists / is inactive.
-        """
-        try:
-            claims = decode_token(raw_token)
-        except JWTError:
-            raise ValueError("Invalid or expired refresh token")
-
-        if claims.get("type") != "refresh":
-            raise ValueError("Token is not a refresh token")
-
-        stored: RefreshToken | None = await self.db.scalar(
-            select(RefreshToken).where(RefreshToken.token == raw_token)
-        )
-        if not stored or stored.revoked:
-            raise ValueError("Refresh token has been revoked")
-
-        user = await self.db.get(User, stored.user_id)
-        if not user or not user.is_active:
-            raise ValueError("User not found or inactive")
-
-        # Revoke old token
-        stored.revoked = True
-        self.db.add(stored)
-
-        access_token, refresh_token = await self._issue_tokens(user)
-        await self.db.commit()
-        return user, access_token, refresh_token
-
-    # ─── Logout ───────────────────────────────────────────────────────────────
-
-    async def logout(self, raw_token: str) -> None:
-        """
-        Revoke a refresh token (idempotent – silently ignores unknown tokens).
-        """
-        stored: RefreshToken | None = await self.db.scalar(
-            select(RefreshToken).where(RefreshToken.token == raw_token)
-        )
-        if stored and not stored.revoked:
-            stored.revoked = True
-            self.db.add(stored)
-            await self.db.commit()
-
-    # ─── Get current user ─────────────────────────────────────────────────────
-
-    async def get_current_user(self, access_token: str) -> User:
-        """
-        Validate an access token and return the authenticated user.
-
-        Raises
-        ------
-        ValueError  if the token is invalid, expired, or user not found.
-        """
-        try:
-            claims = decode_token(access_token)
-        except JWTError:
-            raise ValueError("Invalid or expired access token")
-
-        if claims.get("type") != "access":
-            raise ValueError("Token is not an access token")
-
-        user = await self.db.get(User, claims["sub"])
-        if not user or not user.is_active:
-            raise ValueError("User not found or inactive")
-
-        return user
-
-    # ─── Private helpers ──────────────────────────────────────────────────────
-
-    async def _issue_tokens(self, user: User) -> tuple[str, str]:
-        access_token = create_access_token(str(user.id))
-        refresh_token = create_refresh_token(str(user.id))
-
-        claims = decode_token(refresh_token)
-        expires_at = datetime.fromtimestamp(claims["exp"], tz=timezone.utc)
-
-        rt = RefreshToken(
-            user_id=user.id,
-            token=refresh_token,
-            expires_at=expires_at,
-        )
-        self.db.add(rt)
-        return access_token, refresh_token
+        await self.db.refresh(profile)
+        return profile, True

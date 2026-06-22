@@ -22,7 +22,8 @@ export type PixelIconName =
   | "bento"
   | "snack"
   | "home"
-  | "rank";
+  | "rank"
+  | "user";
 
 export type User = {
   id: string;

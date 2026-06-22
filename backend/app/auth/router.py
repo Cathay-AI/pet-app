@@ -1,21 +1,29 @@
+"""
+Auth router.
+
+With Supabase Auth, the frontend handles login/register/logout via the
+Supabase client SDK. The backend only provides:
+
+  POST /auth/profile/setup  — provision a profile row on first Supabase login
+  GET  /auth/me             — return the authenticated user's profile
+"""
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.schemas import (
-    LoginRequest,
-    LogoutRequest,
-    MessageResponse,
-    RefreshRequest,
-    RegisterRequest,
-    TokenResponse,
-    UserPublic,
-)
+from app.auth.models import Profile
+from app.auth.schemas import ProfilePublic
 from app.auth.service import AuthService
 from app.core.database import get_db
+from app.core.deps import get_current_user
+from app.core.security import decode_supabase_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-bearer_scheme = HTTPBearer()
+
+_bearer = HTTPBearer()
 
 
 def _service(db: AsyncSession = Depends(get_db)) -> AuthService:
@@ -23,94 +31,49 @@ def _service(db: AsyncSession = Depends(get_db)) -> AuthService:
 
 
 @router.post(
-    "/register",
-    response_model=TokenResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new user account",
+    "/profile/setup",
+    response_model=ProfilePublic,
+    status_code=status.HTTP_200_OK,
+    summary="Initialize or return profile for the authenticated Supabase user",
+    description=(
+        "Call this endpoint immediately after every Supabase login/signup. "
+        "It creates a public.profiles row on first login, or returns the "
+        "existing one on subsequent logins. Idempotent."
+    ),
 )
-async def register(
-    body: RegisterRequest,
+async def setup_profile(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     svc: AuthService = Depends(_service),
-) -> TokenResponse:
+) -> ProfilePublic:
     try:
-        user, access_token, refresh_token = await svc.register(body)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+        claims = decode_supabase_token(credentials.credentials)
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Supabase token",
+        )
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserPublic.model_validate(user),
+    sub = claims.get("sub")
+    email = claims.get("email", "")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing 'sub' claim",
+        )
+
+    profile, _ = await svc.get_or_create_profile(
+        supabase_user_id=uuid.UUID(sub),
+        email=email,
     )
-
-
-@router.post(
-    "/login",
-    response_model=TokenResponse,
-    summary="Login with email and password",
-)
-async def login(
-    body: LoginRequest,
-    svc: AuthService = Depends(_service),
-) -> TokenResponse:
-    try:
-        user, access_token, refresh_token = await svc.login(body)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserPublic.model_validate(user),
-    )
-
-
-@router.post(
-    "/refresh",
-    response_model=TokenResponse,
-    summary="Exchange a refresh token for a new token pair",
-)
-async def refresh(
-    body: RefreshRequest,
-    svc: AuthService = Depends(_service),
-) -> TokenResponse:
-    try:
-        user, access_token, refresh_token = await svc.refresh(body.refresh_token)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserPublic.model_validate(user),
-    )
-
-
-@router.post(
-    "/logout",
-    response_model=MessageResponse,
-    summary="Revoke the current refresh token",
-)
-async def logout(
-    body: LogoutRequest,
-    svc: AuthService = Depends(_service),
-) -> MessageResponse:
-    await svc.logout(body.refresh_token)
-    return MessageResponse(message="Logged out successfully")
+    return ProfilePublic.model_validate(profile)
 
 
 @router.get(
     "/me",
-    response_model=UserPublic,
-    summary="Return the currently authenticated user",
+    response_model=ProfilePublic,
+    summary="Return the currently authenticated user's profile",
 )
 async def me(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    svc: AuthService = Depends(_service),
-) -> UserPublic:
-    try:
-        user = await svc.get_current_user(credentials.credentials)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-
-    return UserPublic.model_validate(user)
+    current_user: Profile = Depends(get_current_user),
+) -> ProfilePublic:
+    return ProfilePublic.model_validate(current_user)

@@ -1,81 +1,31 @@
+"""
+Auth domain Pydantic schemas.
+
+With Supabase Auth, register/login/refresh/logout are handled by the
+Supabase client SDK on the frontend. The backend only needs:
+- ProfilePublic: returned by GET /auth/me
+- MessageResponse: generic success response
+"""
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel
 
 
-# ─── Request schemas ──────────────────────────────────────────────────────────
-
-class RegisterRequest(BaseModel):
-    """Body for POST /auth/register"""
-
-    email: EmailStr = Field(..., description="User's e-mail address (used as login ID)")
-    username: str = Field(
-        ...,
-        min_length=1,
-        max_length=24,
-        description="Display name (1-24 characters)",
-    )
-    password: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Plain-text password (min 8 chars, stored as bcrypt hash)",
-    )
-
-    @field_validator("password")
-    @classmethod
-    def password_strength(cls, v: str) -> str:
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(c.isalpha() for c in v):
-            raise ValueError("Password must contain at least one letter")
-        return v
-
-
-class LoginRequest(BaseModel):
-    """Body for POST /auth/login"""
-
-    email: EmailStr = Field(..., description="Registered e-mail address")
-    password: str = Field(..., description="Plain-text password")
-
-
-class RefreshRequest(BaseModel):
-    """Body for POST /auth/refresh"""
-
-    refresh_token: str = Field(..., description="A valid, non-revoked refresh token")
-
-
-class LogoutRequest(BaseModel):
-    """Body for POST /auth/logout"""
-
-    refresh_token: str = Field(..., description="The refresh token to revoke")
-
-
-# ─── Response schemas ─────────────────────────────────────────────────────────
-
-class UserPublic(BaseModel):
-    """Public-safe user fields returned in auth responses"""
+class ProfilePublic(BaseModel):
+    """Public-safe profile fields returned in auth responses."""
 
     id: uuid.UUID
-    email: EmailStr
     username: str
-    is_verified: bool
+    friend_code: str | None = None
+    avatar: str | None = None
+    bio: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class TokenResponse(BaseModel):
-    """Returned on successful login or token refresh"""
-
-    access_token: str = Field(..., description="Short-lived JWT (Bearer token)")
-    refresh_token: str = Field(..., description="Long-lived token for obtaining new access tokens")
-    token_type: str = Field(default="bearer")
-    user: UserPublic
-
-
 class MessageResponse(BaseModel):
-    """Generic success message"""
+    """Generic success message."""
 
     message: str

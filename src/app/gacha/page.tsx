@@ -27,6 +27,10 @@ export default function GachaPage() {
       .then((loaded) => {
         if (!isMounted) return;
         setAuth(loaded.auth);
+        if (loaded.auth.isConfigured && !loaded.auth.userId) {
+          router.replace("/login");
+          return;
+        }
         setCurrentData(loaded.data);
         if (loaded.data.user && loaded.data.pet) {
           router.replace("/home");
@@ -53,7 +57,8 @@ export default function GachaPage() {
 
   function drawPet() {
     const localData = loadNekoData();
-    if ((localData.user && localData.pet) || hasExistingPet) {
+    const alreadyHasPet = auth?.userId ? hasExistingPet : Boolean(localData.user && localData.pet);
+    if (alreadyHasPet) {
       router.replace("/home");
       return;
     }
@@ -67,7 +72,8 @@ export default function GachaPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const localData = loadNekoData();
-    if ((localData.user && localData.pet) || hasExistingPet) {
+    const alreadyHasPet = auth?.userId ? hasExistingPet : Boolean(localData.user && localData.pet);
+    if (alreadyHasPet) {
       router.replace("/home");
       return;
     }
@@ -88,9 +94,9 @@ export default function GachaPage() {
       name: petName.trim(),
       type: result,
       color,
-      hunger: 58,
-      cleanliness: 72,
-      mood: 64,
+      hunger: 100,
+      cleanliness: 100,
+      mood: 100,
       isSick: false,
       zeroSinceAt: null,
       lastFedAt: null,
