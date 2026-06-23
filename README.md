@@ -27,6 +27,12 @@ Open:
 http://localhost:3000
 ```
 
+Deployed app:
+
+```text
+https://pet-app-cathay-aids.vercel.app/gacha
+```
+
 Production build:
 
 ```bash
