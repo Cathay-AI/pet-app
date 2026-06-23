@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
-    from app.auth.models import Profile
+    from app.users.profile import Profile
 
 PetType = Literal["cat", "dog"]
 PetColor = Literal["orange", "brown", "gray", "blue", "mint", "lavender"]

@@ -72,6 +72,19 @@ class PetSnapshot(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProfilePublic(BaseModel):
+    """Public-safe profile fields — base for all profile responses."""
+
+    id: uuid.UUID
+    username: str
+    friend_code: str | None = None
+    avatar: str | None = None
+    bio: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class UserProfilePublic(BaseModel):
     """Public profile of any user (returned on search / friend list)."""
 
@@ -98,15 +111,7 @@ class FriendshipPublic(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class MyProfileResponse(BaseModel):
-    """Full self-profile response."""
+class MyProfileResponse(ProfilePublic):
+    """Full self-profile response — extends ProfilePublic with pet data."""
 
-    id: uuid.UUID
-    username: str
-    friend_code: str | None = None
-    avatar: str | None = None
-    bio: str | None = None
     pet: PetSnapshot | None = None
-    created_at: datetime
-
-    model_config = {"from_attributes": True}

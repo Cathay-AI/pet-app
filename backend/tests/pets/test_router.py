@@ -3,7 +3,7 @@ Integration tests for /api/v1/pets endpoints.
 
 Flow tested
 -----------
-1. Register a user → get access_token
+1. Provision profile with a Supabase-style token
 2. Create pet → 201
 3. Create second pet → 409 (1-per-user rule)
 4. GET /pets/me → 200
@@ -13,32 +13,60 @@ Flow tested
 8. Unauthenticated requests → 403
 """
 
-import pytest
+import base64
+import uuid
+from datetime import datetime, timedelta, timezone
+
 from httpx import AsyncClient
+from jose import jwt
+
+from app.core.config import settings
 
 AUTH = "/api/v1/auth"
 PETS = "/api/v1/pets"
 
 VALID_USER_A = {
+    "id": uuid.UUID("aaaaaaaa-0000-0000-0000-000000000201"),
     "email": "neko_a@example.com",
     "username": "NekoA",
-    "password": "NekoPass1",
 }
 VALID_USER_B = {
+    "id": uuid.UUID("aaaaaaaa-0000-0000-0000-000000000202"),
     "email": "neko_b@example.com",
     "username": "NekoB",
-    "password": "NekoPass2",
 }
 VALID_PET = {"name": "Mochi", "type": "cat", "color": "orange"}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async def register_and_token(client: AsyncClient, user: dict) -> str:
-    """Register user and return access_token."""
-    resp = await client.post(f"{AUTH}/register", json=user)
-    assert resp.status_code == 201, resp.text
-    return resp.json()["access_token"]
+def _jwt_key() -> bytes:
+    try:
+        return base64.b64decode(settings.supabase_jwt_secret)
+    except Exception:
+        return settings.supabase_jwt_secret.encode("utf-8")
+
+
+def supabase_token(user: dict) -> str:
+    return jwt.encode(
+        {
+            "sub": str(user["id"]),
+            "email": user["email"],
+            "aud": "authenticated",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
+            "user_metadata": {"username": user["username"]},
+        },
+        _jwt_key(),
+        algorithm="HS256",
+    )
+
+
+async def provision_profile_and_token(client: AsyncClient, user: dict) -> str:
+    """Provision a local profile and return a Supabase-style access token."""
+    token = supabase_token(user)
+    resp = await client.post(f"{AUTH}/profile/setup", headers=auth_header(token))
+    assert resp.status_code == 200, resp.text
+    return token
 
 
 def auth_header(token: str) -> dict:
@@ -48,7 +76,7 @@ def auth_header(token: str) -> dict:
 # ─── Create pet ───────────────────────────────────────────────────────────────
 
 async def test_create_pet_success(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     resp = await client.post(PETS, json=VALID_PET, headers=auth_header(token))
     assert resp.status_code == 201
     data = resp.json()
@@ -65,7 +93,7 @@ async def test_create_pet_success(client: AsyncClient):
 
 async def test_create_second_pet_is_rejected(client: AsyncClient):
     """1-pet-per-user: creating a second pet must return 409."""
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     await client.post(PETS, json=VALID_PET, headers=auth_header(token))
     resp = await client.post(PETS, json={"name": "Kumo", "type": "dog", "color": "gray"},
                              headers=auth_header(token))
@@ -79,21 +107,21 @@ async def test_create_pet_unauthenticated(client: AsyncClient):
 
 
 async def test_create_pet_invalid_type(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     resp = await client.post(PETS, json={"name": "X", "type": "hamster", "color": "orange"},
                              headers=auth_header(token))
     assert resp.status_code == 422
 
 
 async def test_create_pet_invalid_color(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     resp = await client.post(PETS, json={"name": "X", "type": "cat", "color": "pink"},
                              headers=auth_header(token))
     assert resp.status_code == 422
 
 
 async def test_create_pet_name_too_long(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     resp = await client.post(PETS, json={"name": "A" * 25, "type": "cat", "color": "orange"},
                              headers=auth_header(token))
     assert resp.status_code == 422
@@ -102,7 +130,7 @@ async def test_create_pet_name_too_long(client: AsyncClient):
 # ─── GET /pets/me ─────────────────────────────────────────────────────────────
 
 async def test_get_my_pet_success(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     await client.post(PETS, json=VALID_PET, headers=auth_header(token))
     resp = await client.get(f"{PETS}/me", headers=auth_header(token))
     assert resp.status_code == 200
@@ -110,7 +138,7 @@ async def test_get_my_pet_success(client: AsyncClient):
 
 
 async def test_get_my_pet_not_yet_created(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     resp = await client.get(f"{PETS}/me", headers=auth_header(token))
     assert resp.status_code == 404
 
@@ -123,7 +151,7 @@ async def test_get_my_pet_unauthenticated(client: AsyncClient):
 # ─── GET /pets/{pet_id} ───────────────────────────────────────────────────────
 
 async def test_get_pet_by_id_success(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     create_resp = await client.post(PETS, json=VALID_PET, headers=auth_header(token))
     pet_id = create_resp.json()["id"]
 
@@ -134,8 +162,8 @@ async def test_get_pet_by_id_success(client: AsyncClient):
 
 async def test_get_pet_by_id_other_user_is_forbidden(client: AsyncClient):
     """User B cannot access User A's pet."""
-    token_a = await register_and_token(client, VALID_USER_A)
-    token_b = await register_and_token(client, VALID_USER_B)
+    token_a = await provision_profile_and_token(client, VALID_USER_A)
+    token_b = await provision_profile_and_token(client, VALID_USER_B)
 
     create_resp = await client.post(PETS, json=VALID_PET, headers=auth_header(token_a))
     pet_id = create_resp.json()["id"]
@@ -145,7 +173,7 @@ async def test_get_pet_by_id_other_user_is_forbidden(client: AsyncClient):
 
 
 async def test_get_pet_by_id_not_found(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     fake_id = "00000000-0000-0000-0000-000000000000"
     resp = await client.get(f"{PETS}/{fake_id}", headers=auth_header(token))
     assert resp.status_code == 404
@@ -154,7 +182,7 @@ async def test_get_pet_by_id_not_found(client: AsyncClient):
 # ─── PUT /pets/me ─────────────────────────────────────────────────────────────
 
 async def test_update_pet_success(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     await client.post(PETS, json=VALID_PET, headers=auth_header(token))
     
     update_data = {
@@ -178,7 +206,7 @@ async def test_update_pet_success(client: AsyncClient):
 
 
 async def test_update_pet_not_found(client: AsyncClient):
-    token = await register_and_token(client, VALID_USER_A)
+    token = await provision_profile_and_token(client, VALID_USER_A)
     update_data = {
         "hunger": 80,
         "cleanliness": 70,
@@ -192,10 +220,10 @@ async def test_update_pet_not_found(client: AsyncClient):
 # ─── GET /pets/leaderboard ────────────────────────────────────────────────────
 
 async def test_get_leaderboard_success(client: AsyncClient):
-    token_a = await register_and_token(client, VALID_USER_A)
+    token_a = await provision_profile_and_token(client, VALID_USER_A)
     await client.post(PETS, json=VALID_PET, headers=auth_header(token_a))
     
-    token_b = await register_and_token(client, VALID_USER_B)
+    token_b = await provision_profile_and_token(client, VALID_USER_B)
     await client.post(PETS, json={"name": "Pochi", "type": "dog", "color": "brown"}, headers=auth_header(token_b))
     
     resp = await client.get(f"{PETS}/leaderboard")

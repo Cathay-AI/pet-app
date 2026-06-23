@@ -10,7 +10,7 @@
 
 * **安全性增強**：前端所有與伺服器之互動皆經過 FastAPI 後端進行權限校驗。前端透過 Supabase SDK 取得 JWT Token，並在每次調用 API 時透過 `Authorization: Bearer <token>` 標頭發送，後端由 FastAPI 解密驗證 Claim (`sub` 對應到 `auth.users` 的 ID) 來判定身分。
 * **主要新增功能**：
-  1. **完整註冊/登入/密碼重置流程**：提供前端帳密註冊、登入切換，以及忘記密碼、重設密碼頁面。
+  1. **Supabase Auth 整合**：註冊、登入、登出、密碼重置皆由前端 Supabase SDK 處理；FastAPI 後端只負責驗證 Supabase JWT、初始化/讀取 `profiles`。
   2. **個人設定與專屬好友碼**：支援自訂暱稱 (username)、頭像、個人簡介 (bio)，且每個 Profile 在首次初始化時皆會生成唯一的專屬好友碼（例如 `NEKO-A3B7`）。
   3. **雙向好友系統**：可透過好友碼搜尋飼主、發送好友邀請、處理待審核邀請（同意/拒絕）、查看好友列表以及解除好友關係。
   4. **雲端寵物同步**：寵物的新增、狀態查詢、數值更新與排行榜全部 API 化，並於資料庫層面限制「每位使用者僅能擁有一隻寵物」。
@@ -159,16 +159,54 @@ FRONTEND_URL=http://localhost:3000
 
 後端採用 **FastAPI + SQLAlchemy 2.0 (Async)** 實作，並劃分成三個主模組：
 
+### 0. 後端檔案命名與目前結構
+
+目前後端已整理為「domain package + 可讀性優先」的命名方式，不再使用不存在或過期的 `models.py` 匯入：
+
+```text
+backend/app/
+  auth/
+    router.py
+    service.py
+  core/
+    auth_dependencies.py   # 原 deps.py，放 get_current_user 等驗證依賴
+    config.py
+    database.py
+    schemas.py             # 共用 response schema，例如 MessageResponse
+    security.py
+  pets/
+    pet.py                 # Pet ORM model
+    router.py
+    schemas.py
+    service.py
+  users/
+    profile.py             # Profile ORM model
+    friendship.py          # Friendship ORM model
+    router.py
+    schemas.py
+    service.py
+```
+
+已修正的舊引用：
+
+* `backend/app/main.py` 已改為匯入實際 ORM 檔案：`app.pets.pet`、`app.users.friendship`、`app.users.profile`。
+* `backend/app/core/deps.py` 已改名為 `backend/app/core/auth_dependencies.py`，所有 router 都改由 `app.core.auth_dependencies` 匯入 `get_current_user`。
+* `backend/app/seed.py` 已移除舊的 `User` / `hash_password` / `app.*.models` 依賴，改用現行 `Profile` + `Pet` seed 資料。
+* `backend/tests/conftest.py` 也同步改為載入現行 ORM 檔案，讓 SQLite test DB 可以正確 `create_all()`。
+
 ### 1. 認證模組 (`app.auth`)
 
 * `POST /api/v1/auth/profile/setup`：首次登入/註冊後的帳號初始化（冪等性）。若 `profiles` 尚無當前 UUID 的資料，會隨機生成 4 碼的大寫字母/數字後綴（例如 `NEKO-F8A2`）作為 `friend_code` 寫入資料庫。
+  * 後端會從 Supabase JWT 的 `sub` 取得使用者 UUID。
+  * 若 token 內含 `user_metadata.username` 或 `user_metadata.full_name`，會優先用作初始 username；否則會從 email 前綴推導。
 * `GET /api/v1/auth/me`：回傳目前登入者的 Profile。
+  * 若 token 有效但 profile 尚不存在，目前 `get_current_user` 會自動建立 profile，避免前端漏呼叫 setup 時直接失敗。
 
 ### 2. 使用者與好友模組 (`app.users`)
 
 * `GET /api/v1/users/me/profile`：獲取當前使用者的詳細 Profile。
 * `PATCH /api/v1/users/me/profile`：變更使用者暱稱 (username)、頭像 (avatar)、個人簡介 (bio)。
-* `GET /api/v1/users/search?friend_code=...`：以好友代碼搜尋其他飼主，會回傳該使用者是否已是好友或處於邀請狀態。
+* `GET /api/v1/users/search?friend_code=...`：以好友代碼搜尋其他飼主，回傳公開 profile 與寵物摘要；目前 response 尚未包含「是否已是好友 / 邀請狀態」欄位。
 * `GET /api/v1/users/me/friends`：列出所有已同意 (accepted) 的好友。
 * `GET /api/v1/users/me/friends/pending`：列出所有發送給當前使用者的待處理 (pending) 好友邀請。
 * `POST /api/v1/users/me/friends`：透過指定的好友碼發送好友申請。
@@ -180,8 +218,8 @@ FRONTEND_URL=http://localhost:3000
 * `POST /api/v1/pets`：新增寵物（類型限 cat/dog，顏色 6 選 1）。限制一帳號僅能養一隻。
 * `GET /api/v1/pets/me`：獲取當前飼主的寵物資料。
 * `PUT /api/v1/pets/me`：將前端最新的狀態數值同步至資料庫。
-* `GET /api/v1/pets/leaderboard`：獲取健康分前 50 名的寵物列表，並一併查詢其擁有者的 username。
-* `GET /api/v1/pets/{pet_id}`：獲取特定寵物（需為本人或已建立好友關係）。
+* `GET /api/v1/pets/leaderboard`：獲取最多 50 隻寵物列表，目前依 `updated_at desc` 排序，並一併查詢其擁有者的 username。
+* `GET /api/v1/pets/{pet_id}`：獲取特定寵物；目前後端限制只有寵物本人可讀取，尚未開放好友讀取。
 
 ---
 
@@ -199,12 +237,13 @@ FRONTEND_URL=http://localhost:3000
 
 * 重新設計為 Tab 切換介面（「登入」與「註冊」）。
 * **註冊 Tab**：新增「飼主名稱」、「電子信箱」、「密碼」、「確認密碼」的輸入欄位，防呆機制包含確認密碼一致性等。
-* 成功註冊或登入後，會自動在 Promise 鏈中呼叫一次後端的 `setup_profile` 進行 DB 初始化。
+* 成功註冊或登入後，會自動呼叫後端的 `POST /api/v1/auth/profile/setup` 進行 DB 初始化。
+* 注意：後端沒有 `/auth/register`、`/auth/login`、`/auth/logout`、`/auth/refresh` API；這些流程由 Supabase SDK 完成。
 
 ### 3. 忘記密碼與密碼重設 ([src/app/forgot-password/page.tsx](file:///Users/cfh00903977/Project/pet-app/src/app/forgot-password/page.tsx) / [src/app/reset-password/page.tsx](file:///Users/cfh00903977/Project/pet-app/src/app/reset-password/page.tsx))
 
-* 提供完整信箱重設連結發送，以及點擊信箱連結跳轉後進行新密碼設定的 UI 流程。
-  Note : 現在無法使用寄信功能重置密碼，原本已經寫好用 resend 的 api 寄信，但 resend 要求前端要認證網域，現在暫時無法。
+* UI 可保留，但後端目前沒有自建 `/auth/forgot-password` 或 `/auth/reset-password` API。
+* 建議改由 Supabase Auth 的 password reset flow 處理；`backend/app/core/mail.py` 仍有舊 Resend 寄信 helper，但目前未接在現行 auth router 上。
 
 ### 4. 設定與好友管理頁面 ([src/app/settings/page.tsx](file:///Users/cfh00903977/Project/pet-app/src/app/settings/page.tsx))
 
@@ -252,6 +291,11 @@ FRONTEND_URL=http://localhost:3000
      npm run dev
      ```
 4. **測試驗證重點**：
+   * 後端 pytest 已修正為目前 Supabase Auth 架構，可在專案根目錄執行：
+     ```bash
+     PYTHONPYCACHEPREFIX=/private/tmp/pet-app-pycache PYTHONPATH=backend backend/.venv/bin/python -m pytest backend/tests -q
+     ```
+     目前結果：`25 passed`。仍會看到 `pytest-asyncio` 與 `python-jose` 的 deprecation warnings，但不影響測試通過。
    * 點擊設定頁籤確認是否成功引導至 `/login`。
    * 註冊新帳密，並確認 Supabase 帳號生成時，`profiles` 表有沒有自動寫入對應的隨機 `friend_code`（可進 FastAPI 交互式文件 `http://localhost:8000/docs` 調用 `/auth/me` 查看）。
    * 編輯個人檔案（更換頭像與 bio），重開頁面確認狀態維持。
