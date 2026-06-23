@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.pets.models import Pet
+from app.pets.pet import Pet
 from app.pets.schemas import CreatePetRequest, UpdatePetRequest
 
 
@@ -107,7 +107,7 @@ class PetService:
         """
         Fetch top 50 pets ordered by updated_at descending with owner's username.
         """
-        from app.auth.models import Profile
+        from app.users.profile import Profile
         # Query pets joining profiles to get username
         query = (
             select(Pet, Profile.username)

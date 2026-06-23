@@ -3,9 +3,8 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from app.core.database import AsyncSessionLocal, Base, engine
-from app.auth.models import User
-from app.pets.models import Pet
-from app.core.security import hash_password
+from app.pets.pet import Pet
+from app.users.profile import Profile
 
 async def seed_db():
     async with engine.begin() as conn:
@@ -15,32 +14,35 @@ async def seed_db():
     async with AsyncSessionLocal() as session:
         print("Starting seeding process...")
         
-        # Define mock users
-        mock_users = [
-            {"email": "alice@example.com", "username": "Alice", "password": "password123"},
-            {"email": "bob@example.com", "username": "Bob_Dev", "password": "password123"},
-            {"email": "charlie@example.com", "username": "Charlie", "password": "password123"},
-            {"email": "david@example.com", "username": "David_DogLover", "password": "password123"},
-            {"email": "eva@example.com", "username": "Eva_CatLover", "password": "password123"},
+        # Define mock profiles. In production these IDs mirror Supabase auth.users.id.
+        mock_profiles = [
+            {"id": uuid.UUID("00000000-0000-0000-0000-000000000001"), "username": "Alice", "friend_code": "NEKO-AL1C"},
+            {"id": uuid.UUID("00000000-0000-0000-0000-000000000002"), "username": "Bob_Dev", "friend_code": "NEKO-B0B1"},
+            {"id": uuid.UUID("00000000-0000-0000-0000-000000000003"), "username": "Charlie", "friend_code": "NEKO-CH4R"},
+            {"id": uuid.UUID("00000000-0000-0000-0000-000000000004"), "username": "David_DogLover", "friend_code": "NEKO-D4V1"},
+            {"id": uuid.UUID("00000000-0000-0000-0000-000000000005"), "username": "Eva_CatLover", "friend_code": "NEKO-EV4A"},
         ]
         
-        created_users = []
-        for u_data in mock_users:
-            existing = await session.scalar(select(User).where(User.email == u_data["email"]))
+        created_profiles = []
+        for profile_data in mock_profiles:
+            existing = await session.get(Profile, profile_data["id"])
             if not existing:
-                user = User(
-                    email=u_data["email"],
-                    username=u_data["username"],
-                    hashed_password=hash_password(u_data["password"]),
-                    is_active=True
+                profile = Profile(
+                    id=profile_data["id"],
+                    username=profile_data["username"],
+                    friend_code=profile_data["friend_code"],
                 )
-                session.add(user)
+                session.add(profile)
                 await session.flush()
-                print(f"Created user: {u_data['username']}")
-                created_users.append(user)
+                print(f"Created profile: {profile_data['username']}")
+                created_profiles.append(profile)
             else:
-                print(f"User already exists: {u_data['username']}")
-                created_users.append(existing)
+                existing.username = profile_data["username"]
+                existing.friend_code = profile_data["friend_code"]
+                session.add(existing)
+                await session.flush()
+                print(f"Profile already exists: {profile_data['username']}")
+                created_profiles.append(existing)
         
         # Define mock pets for the users
         # Alice gets a happy cat
@@ -52,7 +54,7 @@ async def seed_db():
         
         mock_pets = [
             {
-                "user": created_users[0],
+                "profile": created_profiles[0],
                 "name": "Mimi",
                 "type": "cat",
                 "color": "orange",
@@ -65,7 +67,7 @@ async def seed_db():
                 "last_play_at": now - timedelta(minutes=30),
             },
             {
-                "user": created_users[1],
+                "profile": created_profiles[1],
                 "name": "Barky",
                 "type": "dog",
                 "color": "brown",
@@ -78,7 +80,7 @@ async def seed_db():
                 "last_play_at": now - timedelta(hours=6),
             },
             {
-                "user": created_users[2],
+                "profile": created_profiles[2],
                 "name": "NekoSick",
                 "type": "cat",
                 "color": "gray",
@@ -92,7 +94,7 @@ async def seed_db():
                 "last_play_at": now - timedelta(hours=24),
             },
             {
-                "user": created_users[3],
+                "profile": created_profiles[3],
                 "name": "Buddy",
                 "type": "dog",
                 "color": "mint",
@@ -105,7 +107,7 @@ async def seed_db():
                 "last_play_at": now - timedelta(hours=2),
             },
             {
-                "user": created_users[4],
+                "profile": created_profiles[4],
                 "name": "Lulu",
                 "type": "cat",
                 "color": "lavender",
@@ -120,11 +122,11 @@ async def seed_db():
         ]
         
         for p_data in mock_pets:
-            user = p_data["user"]
-            existing_pet = await session.scalar(select(Pet).where(Pet.user_id == user.id))
+            profile = p_data["profile"]
+            existing_pet = await session.scalar(select(Pet).where(Pet.user_id == profile.id))
             if not existing_pet:
                 pet = Pet(
-                    user_id=user.id,
+                    user_id=profile.id,
                     name=p_data["name"],
                     type=p_data["type"],
                     color=p_data["color"],
@@ -139,7 +141,7 @@ async def seed_db():
                     updated_at=now
                 )
                 session.add(pet)
-                print(f"Created pet {p_data['name']} for user {user.username}")
+                print(f"Created pet {p_data['name']} for profile {profile.username}")
             else:
                 # Update existing pet stats to match seed to allow re-running
                 existing_pet.hunger = p_data["hunger"]
@@ -152,7 +154,7 @@ async def seed_db():
                 existing_pet.last_play_at = p_data["last_play_at"]
                 existing_pet.updated_at = now
                 session.add(existing_pet)
-                print(f"Updated pet {p_data['name']} stats for user {user.username}")
+                print(f"Updated pet {p_data['name']} stats for profile {profile.username}")
         
         await session.commit()
         print("Seeding completed successfully!")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-Auth domain ORM models.
+User domain ORM model — Profile.
 
 With Supabase Auth, we no longer manage passwords or refresh tokens.
 Instead we maintain a public.profiles table that mirrors auth.users (1:1).
@@ -18,8 +18,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
-    from app.pets.models import Pet
-    from app.users.models import Friendship
+    from app.pets.pet import Pet
+    from app.users.friendship import Friendship
 
 
 class Profile(Base):

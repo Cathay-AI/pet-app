@@ -14,11 +14,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import Profile
-from app.auth.schemas import ProfilePublic
+from app.users.profile import Profile
+from app.users.schemas import ProfilePublic
 from app.auth.service import AuthService
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.auth_dependencies import get_current_user
 from app.core.security import decode_supabase_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -61,9 +61,13 @@ async def setup_profile(
             detail="Token missing 'sub' claim",
         )
 
+    user_metadata = claims.get("user_metadata", {})
+    username = user_metadata.get("username") or user_metadata.get("full_name")
+
     profile, _ = await svc.get_or_create_profile(
         supabase_user_id=uuid.UUID(sub),
         email=email,
+        username=username,
     )
     return ProfilePublic.model_validate(profile)
 

@@ -15,7 +15,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import Profile
+from app.users.profile import Profile
 
 
 class AuthService:

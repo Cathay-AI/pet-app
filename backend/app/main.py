@@ -8,9 +8,9 @@ from app.pets.router import router as pets_router
 from app.users.router import router as users_router
 
 # Import all models so SQLAlchemy can resolve relationships
-import app.auth.models   # noqa: F401
-import app.pets.models   # noqa: F401
-import app.users.models  # noqa: F401
+import app.pets.pet  # noqa: F401
+import app.users.friendship  # noqa: F401
+import app.users.profile  # noqa: F401
 
 
 @asynccontextmanager

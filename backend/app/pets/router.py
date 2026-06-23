@@ -3,9 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import Profile
+from app.users.profile import Profile
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.auth_dependencies import get_current_user
 from app.pets.schemas import CreatePetRequest, PetResponse, UpdatePetRequest, LeaderboardPetResponse
 from app.pets.service import PetService
 
