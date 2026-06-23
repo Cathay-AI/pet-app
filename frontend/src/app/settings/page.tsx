@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import PixelIcon from "@/components/PixelIcon";
 import PetCanvas from "@/components/PetCanvas";
 import {
+  getAuthState,
   getMyProfile,
   updateProfile,
   changePassword,
@@ -60,6 +61,15 @@ export default function SettingsPage() {
   const loadAllData = async () => {
     try {
       setLoading(true);
+
+      // 先確認登入狀態，未登入直接跳轉，避免對需要 Bearer token 的 API
+      // 發出請求（FastAPI HTTPBearer 在無 token 時回 403 而非 401）
+      const auth = await getAuthState();
+      if (!auth.userId) {
+        router.replace("/login");
+        return;
+      }
+
       const userProfile = await getMyProfile();
       setProfile(userProfile);
       setUsername(userProfile.username || "");
@@ -73,8 +83,13 @@ export default function SettingsPage() {
       setPendingRequests(pendingList);
     } catch (err: any) {
       console.error(err);
-      // If unauthorized, redirect to login
-      if (err.message.includes("401") || err.message.includes("credentials") || err.message.includes("token")) {
+      // 其他授權錯誤也導向登入頁
+      if (
+        err.message.includes("401") ||
+        err.message.includes("403") ||
+        err.message.includes("credentials") ||
+        err.message.includes("token")
+      ) {
         router.replace("/login");
       }
     } finally {
