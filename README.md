@@ -175,6 +175,53 @@ production frontend builds from silently falling back to `http://localhost:8000`
 
 ---
 
+## Current Implementation Architecture
+
+```mermaid
+flowchart LR
+  user[Browser] --> frontend[Vercel Frontend\nNext.js app]
+  frontend --> supabaseAuth[Supabase Auth\nJWT session]
+  frontend --> backend[Render Backend\nFastAPI API]
+  backend --> supabaseAuth
+  backend --> postgres[Supabase Postgres\nprofiles pets friendships]
+
+  localFrontend[Local Frontend\nlocalhost:3000] --> localBackend[Local Backend\nlocalhost:8000]
+  localBackend --> postgres
+```
+
+The deployed frontend and backend are separate services:
+
+| Surface | Runtime | Current URL |
+|---------|---------|-------------|
+| PR frontend preview | Vercel / Next.js | `https://pet-app-git-codex-fix-dev-vercel-deploy-cathay-aids.vercel.app` |
+| Backend API | Render / FastAPI | `https://pet-app-backend-9ea9.onrender.com` |
+| Backend health check | Render / FastAPI | `https://pet-app-backend-9ea9.onrender.com/health` |
+| Supabase project | Supabase Auth + Postgres | `https://fstpizpfknqbztowgyzw.supabase.co` |
+
+Runtime responsibilities:
+
+| Layer | Responsibility |
+|-------|----------------|
+| Frontend | UI, Supabase browser session, optimistic pet interactions |
+| Backend | Authenticated API, profile setup, pet persistence, leaderboard, friends, server-side pet decay |
+| Supabase Auth | User identity and JWT issuance |
+| Supabase Postgres | Persistent `profiles`, `pets`, and `friendships` tables |
+
+Environment ownership:
+
+| Platform | Required keys |
+|----------|---------------|
+| Vercel frontend | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_FRONTEND_URL` |
+| Render backend | `APP_ENV`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`, `APP_CORS_ORIGINS`, `FRONTEND_URL`, `PYTHON_VERSION` |
+| Local frontend | Same `NEXT_PUBLIC_*` keys, with localhost URLs |
+| Local backend | Same backend keys, with localhost CORS/frontend URLs |
+
+No secret values should be committed to this repository. Use Vercel and Render
+environment variables for deployed services, and `.env.local` / `.env` files for
+local development.
+
+---
+
 ## Routes
 
 ```
