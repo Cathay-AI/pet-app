@@ -177,44 +177,106 @@ production frontend builds from silently falling back to `http://localhost:8000`
 
 ## Current Implementation Architecture
 
+The app has two runtime shapes:
+
+- **Local development** runs frontend and backend on the developer machine.
+- **Deployed environments** run the frontend on Vercel and the backend on Render.
+
+Supabase is shared by both shapes for Auth and Postgres persistence.
+
+### Local Development Architecture
+
 ```mermaid
 flowchart LR
-  user[Browser] --> frontend[Vercel Frontend\nNext.js app]
-  frontend --> supabaseAuth[Supabase Auth\nJWT session]
-  frontend --> backend[Render Backend\nFastAPI API]
-  backend --> supabaseAuth
-  backend --> postgres[Supabase Postgres\nprofiles pets friendships]
+  browser[Developer Browser]
 
-  localFrontend[Local Frontend\nlocalhost:3000] --> localBackend[Local Backend\nlocalhost:8000]
+  subgraph local[Local Machine]
+    localFrontend[Next.js Frontend\nfrontend/\nlocalhost:3000]
+    localBackend[FastAPI Backend\nbackend/\nlocalhost:8000]
+  end
+
+  subgraph supabase[Supabase Cloud]
+    supabaseAuth[Supabase Auth\nJWT sessions]
+    postgres[Supabase Postgres\nprofiles / pets / friendships]
+  end
+
+  browser --> localFrontend
+  localFrontend --> supabaseAuth
+  localFrontend --> localBackend
+  localBackend --> supabaseAuth
   localBackend --> postgres
 ```
 
-The deployed frontend and backend are separate services:
+Local URLs:
 
-| Surface | Runtime | Current URL |
-|---------|---------|-------------|
-| PR frontend preview | Vercel / Next.js | `https://pet-app-git-codex-fix-dev-vercel-deploy-cathay-aids.vercel.app` |
-| Backend API | Render / FastAPI | `https://pet-app-backend-9ea9.onrender.com` |
-| Backend health check | Render / FastAPI | `https://pet-app-backend-9ea9.onrender.com/health` |
+| Surface | Runtime | URL |
+|---------|---------|-----|
+| Frontend | Next.js dev server | `http://localhost:3000` |
+| Backend | FastAPI / Uvicorn | `http://localhost:8000` |
+| Backend health check | FastAPI / Uvicorn | `http://localhost:8000/health` |
 | Supabase project | Supabase Auth + Postgres | `https://fstpizpfknqbztowgyzw.supabase.co` |
 
-Runtime responsibilities:
+Local environment files:
 
-| Layer | Responsibility |
-|-------|----------------|
-| Frontend | UI, Supabase browser session, optimistic pet interactions |
-| Backend | Authenticated API, profile setup, pet persistence, leaderboard, friends, server-side pet decay |
-| Supabase Auth | User identity and JWT issuance |
-| Supabase Postgres | Persistent `profiles`, `pets`, and `friendships` tables |
+| File | Purpose |
+|------|---------|
+| `frontend/.env.local` | Browser-safe frontend config with localhost backend/frontend URLs |
+| `backend/.env` | Backend database, Supabase JWT, CORS, and frontend URL config |
 
-Environment ownership:
+Local development is the only place where `NEXT_PUBLIC_BACKEND_URL` should be
+`http://localhost:8000`.
 
-| Platform | Required keys |
-|----------|---------------|
-| Vercel frontend | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_FRONTEND_URL` |
-| Render backend | `APP_ENV`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`, `APP_CORS_ORIGINS`, `FRONTEND_URL`, `PYTHON_VERSION` |
-| Local frontend | Same `NEXT_PUBLIC_*` keys, with localhost URLs |
-| Local backend | Same backend keys, with localhost CORS/frontend URLs |
+### Deployed Architecture
+
+```mermaid
+flowchart LR
+  user[User Browser]
+
+  subgraph vercel[Vercel]
+    deployedFrontend[Next.js Frontend\nfrontend/ build output]
+  end
+
+  subgraph render[Render]
+    deployedBackend[FastAPI Backend\npublic API service]
+  end
+
+  subgraph supabaseCloud[Supabase Cloud]
+    deployedAuth[Supabase Auth\nJWT sessions]
+    deployedPostgres[Supabase Postgres\nprofiles / pets / friendships]
+  end
+
+  user --> deployedFrontend
+  deployedFrontend --> deployedAuth
+  deployedFrontend --> deployedBackend
+  deployedBackend --> deployedAuth
+  deployedBackend --> deployedPostgres
+```
+
+Deployed URLs:
+
+| Surface | Platform | Runtime | Current URL |
+|---------|----------|---------|-------------|
+| PR frontend preview | Vercel | Next.js | `https://pet-app-git-codex-fix-dev-vercel-deploy-cathay-aids.vercel.app` |
+| Backend API | Render | FastAPI | `https://pet-app-backend-9ea9.onrender.com` |
+| Backend health check | Render | FastAPI | `https://pet-app-backend-9ea9.onrender.com/health` |
+| Supabase project | Supabase | Auth + Postgres | `https://fstpizpfknqbztowgyzw.supabase.co` |
+
+Service responsibilities:
+
+| Service | Role |
+|---------|------|
+| Vercel | Hosts and builds the Next.js frontend from `frontend/`; serves the browser app and static/server-rendered Next.js output. |
+| Render | Runs the FastAPI backend from `backend/`; exposes authenticated API endpoints for profiles, pets, leaderboard, friends, and server-side pet decay. |
+| Supabase Auth | Owns user identity, login sessions, password reset redirects, and JWT issuance. |
+| Supabase Postgres | Stores persistent application data: `profiles`, `pets`, and `friendships`. |
+
+Deployed environment ownership:
+
+| Platform | Required keys | Notes |
+|----------|---------------|-------|
+| Vercel frontend | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_FRONTEND_URL` | `NEXT_PUBLIC_BACKEND_URL` must point to Render, not localhost. |
+| Render backend | `APP_ENV`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`, `APP_CORS_ORIGINS`, `FRONTEND_URL`, `PYTHON_VERSION` | `APP_CORS_ORIGINS` must include the deployed Vercel frontend origins. |
+| Supabase Auth | Site URL and Redirect URLs | Must include the Vercel frontend URLs used for login and password reset. |
 
 No secret values should be committed to this repository. Use Vercel and Render
 environment variables for deployed services, and `.env.local` / `.env` files for
