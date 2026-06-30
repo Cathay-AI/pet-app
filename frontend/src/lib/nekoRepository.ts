@@ -6,7 +6,8 @@ import { normalizeNekoData } from "@/lib/petCollection";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { LeaderboardEntry, NekoData, Pet, PetColorId, PetType, User } from "@/types";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
 
 // ─── HTTP Client Helper (uses Supabase session token) ────────────────────────
 
@@ -23,7 +24,11 @@ async function getSupabaseToken(): Promise<string | null> {
 }
 
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const url = `${BACKEND_URL}${path}`;
+  if (!BACKEND_URL) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is not configured.");
+  }
+
+  const url = `${BACKEND_URL.replace(/\/$/, "")}${path}`;
   const headers = new Headers(options.headers || {});
 
   const token = await getSupabaseToken();
