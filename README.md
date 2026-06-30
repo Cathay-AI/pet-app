@@ -63,7 +63,18 @@ cp frontend/.env.example frontend/.env.local
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
 ```
+
+`NEXT_PUBLIC_BACKEND_URL` intentionally points to localhost for local development.
+In production or Vercel preview deployments, set it to the public backend API
+origin instead, for example `https://api.example.com`. If it is missing in a
+production build, the frontend will not fall back to `localhost:8000`, because
+that would make deployed users call their own machines.
+
+`NEXT_PUBLIC_FRONTEND_URL` is used for auth redirects such as password reset.
+Keep it as `http://localhost:3000` locally and set it to the Vercel deployment
+origin for preview/production environments.
 
 ---
 
@@ -101,6 +112,66 @@ npm run dev
 App available at: `http://localhost:3000`
 
 > **Note:** The dev server uses `--webpack` to avoid Turbopack instability (`next dev --webpack`).
+
+### Localhost Contract
+
+Local development remains split by service:
+
+| Service | Directory | Command | URL |
+|---------|-----------|---------|-----|
+| Backend | `backend/` | `uv run uvicorn app.main:app --reload` | `http://localhost:8000` |
+| Frontend | `frontend/` | `npm run dev` | `http://localhost:3000` |
+
+This is the expected setup for developers. Do not point deployed Vercel
+environments at `http://localhost:8000`; use a public backend URL instead.
+
+---
+
+## Vercel Deployment
+
+This repository is a monorepo:
+
+```text
+backend/   FastAPI service
+frontend/  Next.js app deployed by Vercel
+```
+
+Vercel should deploy the frontend only. The repo-level `vercel.json` keeps the
+Vercel project root at the repository root while explicitly running the frontend
+install and build:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run build
+```
+
+The output directory is `frontend/.next`.
+
+### Required Vercel Environment Variables
+
+Set these in the Vercel project for preview and production:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_BACKEND_URL=https://<public-backend-origin>
+NEXT_PUBLIC_FRONTEND_URL=https://<vercel-app-origin>
+```
+
+The backend must allow the deployed frontend origin in `APP_CORS_ORIGINS`.
+
+### Previous Dev Branch Failure
+
+The `dev` branch had been restructured into `backend/` and `frontend/`, but the
+Vercel deployment was still building from the repository root. Vercel ran
+`next build` at root and failed with:
+
+```text
+Couldn't find any `pages` or `app` directory. Please create one under the project root
+```
+
+The fix is to make Vercel install and build from `frontend/`, and to keep
+production frontend builds from silently falling back to `http://localhost:8000`.
 
 ---
 
