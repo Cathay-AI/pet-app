@@ -1,203 +1,213 @@
 # Neko
 
-Neko is a frontend prototype for a "virtual pet x goal achievement" product. The MVP focuses on one savings goal: users create a goal, add daily progress, earn coins, unlock pet skins, and see achievements.
+Neko is a pixel virtual pet app built around one product principle:
 
-Live app: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
+> Real time creates virtual responsibility.
 
-This project is intentionally frontend-only today. The code is structured so the product can later grow into a backend-backed web app and an iOS app without rewriting the core product rules.
+Users draw one cat or dog, care for it over real time, and see the result reflected in a public health leaderboard.
 
-## Current MVP Scope
+## Stack
 
-Included:
+| Layer    | Technology                                    |
+|----------|-----------------------------------------------|
+| Frontend | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS |
+| Backend  | FastAPI · SQLAlchemy (async) · Python 3.12    |
+| Auth     | Supabase Auth (JWT) · magic-link email        |
+| Database | Supabase Postgres                             |
+| Runtime  | uv (Python) · npm (Node)                      |
 
-- Next.js App Router frontend
-- React + TypeScript
-- Tailwind CSS
-- Single-user localStorage persistence
-- One savings goal
-- Manual progress records
-- Coin rewards
-- Pet status logic
-- Reward shop
-- Achievements
-- Mobile-friendly responsive UI
+---
 
-Not included:
+## Prerequisites
 
-- Login
-- Backend API
-- Database
-- AI chat
-- Voice input
-- Native iOS implementation
-- Multi-user social features
+- **Python 3.12+** with [`uv`](https://github.com/astral-sh/uv) installed
+- **Node.js 20+** with `npm`
+- A [Supabase](https://supabase.com) project (free tier is fine)
 
-## Quick Start
+---
+
+## Environment Setup
+
+### Backend (`backend/.env`)
+
+Copy the example and fill in your Supabase credentials:
 
 ```bash
+cp backend/.env.example backend/.env
+```
+
+```env
+# Supabase Postgres – use Transaction pooler URL for production
+DATABASE_URL=postgresql+asyncpg://postgres.[ref]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+# Supabase Dashboard > Settings > API
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_ANON_KEY=<anon key>
+
+# Supabase Dashboard > Settings > API > JWT Settings
+SUPABASE_JWT_SECRET=<jwt secret>
+
+# App
+APP_ENV=development
+APP_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+FRONTEND_URL=http://localhost:3000
+```
+
+### Frontend (`frontend/.env.local`)
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+```
+
+---
+
+## Database Migrations
+
+Run the SQL migrations against your Supabase project (Supabase Dashboard → SQL Editor):
+
+```text
+supabase/migrations/001_neko_auth_pets.sql   – profiles, pets tables
+supabase/migrations/002_friendships.sql      – friendships table
+```
+
+---
+
+## Running Locally
+
+### 1. Backend
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+```
+
+API available at: `http://localhost:8000`  
+Interactive docs: `http://localhost:8000/docs`
+
+### 2. Frontend
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-Open:
+App available at: `http://localhost:3000`
 
-```text
-http://localhost:3000
+> **Note:** The dev server uses `--webpack` to avoid Turbopack instability (`next dev --webpack`).
+
+---
+
+## Routes
+
+```
+/               Entry router – redirects based on auth state
+/login          Magic-link login
+/gacha          First pet draw and naming
+/home           Pet care screen
+/leaderboard    Public health ranking
+/settings       Profile and account settings
+/rooms          Friend rooms (coming soon)
+/forgot-password  Password recovery
+/reset-password   Password reset
 ```
 
-Production build:
+## API Endpoints
 
-```bash
-npm run build
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/v1/auth/me` | Current user info |
+| POST | `/api/v1/auth/profile/setup` | First-time profile setup |
+| GET | `/api/v1/pets/me` | Get my pet |
+| PUT | `/api/v1/pets/me` | Update pet state |
+| GET | `/api/v1/pets/leaderboard` | Public leaderboard |
+| GET | `/api/v1/users/me/profile` | My profile |
+| PATCH | `/api/v1/users/me/profile` | Update profile |
+| GET | `/api/v1/users/me/friends` | Friend list |
+| GET | `/api/v1/users/me/friends/pending` | Pending requests |
+| POST | `/api/v1/users/me/friends` | Send friend request |
+| PATCH | `/api/v1/users/me/friends/{id}` | Accept/decline request |
+| DELETE | `/api/v1/users/me/friends/{id}` | Remove friend |
+| GET | `/api/v1/users/search` | Search by friend code |
 
-The build script uses webpack:
-
-```json
-"build": "next build --webpack"
-```
-
-This avoids a local Turbopack sandbox issue observed during development. Vercel can still deploy the app directly from this repository.
+---
 
 ## Project Structure
 
-```text
-src/
-  app/
-    page.tsx              App entry, view switching, top-level state
-    layout.tsx            Metadata and root HTML layout
-    globals.css           Tailwind globals and shared utility classes
-    icon.svg              App favicon
-
-  components/
-    LandingPage.tsx       Product intro and CTA
-    GoalSetup.tsx         Savings goal form
-    Dashboard.tsx         Main product screen and mobile panel tabs
-    PetCard.tsx           Pet display, status, and feedback
-    ProgressModal.tsx     Add progress bottom-sheet/modal
-    RewardShop.tsx        Skin unlock/apply UI
-    AchievementList.tsx   Achievement display and unlock toast
-
-  lib/
-    constants.ts          Static game data and initial state
-    gameLogic.ts          Pure product/game rules
-    storage.ts            localStorage repository for current MVP
-
-  types/
-    index.ts              Shared TypeScript data model
-
-docs/
-  ARCHITECTURE.md         Longer-term architecture and team split notes
+```
+pet-app/
+├── backend/
+│   ├── app/
+│   │   ├── auth/          # Auth router & service
+│   │   ├── core/          # Config, DB, security, dependencies
+│   │   ├── pets/          # Pet model, router, service, schemas
+│   │   ├── users/         # Profile, friendship, router, service
+│   │   ├── main.py        # FastAPI app entry point
+│   │   └── seed.py        # DB seed script
+│   ├── tests/
+│   ├── .env.example
+│   └── pyproject.toml
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/           # Next.js App Router pages
+│   │   ├── components/    # Shared UI components
+│   │   ├── lib/           # Game logic, API client, Supabase
+│   │   └── types/         # TypeScript type definitions
+│   ├── .env.example
+│   └── package.json
+│
+├── supabase/
+│   └── migrations/        # SQL schema migrations
+│
+└── docs/
 ```
 
-## Core Data Model
+---
 
-The product state is represented by `AppData`:
+## Game Logic
 
-```ts
-type AppData = {
-  version: 1;
-  goal: Goal | null;
-  records: ProgressRecord[];
-  userState: UserState;
-};
+Neko does not run background jobs. Pet state is computed on-read:
+
+```
+last saved state + real elapsed time → current hunger / cleanliness / mood
 ```
 
-The `version` field exists so future storage migrations can be handled safely.
+`backend/app/pets/service.py` handles decay calculation server-side.  
+`frontend/src/lib/gameLogic.ts` mirrors the same logic for optimistic UI updates.
 
-## Architectural Rules
+---
 
-Keep these boundaries clear:
+## Validation
 
-- `components/` owns UI only.
-- `lib/gameLogic.ts` owns product rules and should stay framework-independent.
-- `lib/storage.ts` owns persistence for the current localStorage MVP.
-- `types/` owns shared data contracts.
-- `constants.ts` owns static skins, achievements, daily tasks, and initial state.
+Before opening a PR:
 
-Avoid putting business rules directly inside React components. If a rule affects coins, streak, achievements, pet status, storage shape, or goal progress, put it in `lib/gameLogic.ts` or a future domain module.
+```bash
+# Backend tests
+cd backend
+uv run pytest
 
-## Future Backend Split
-
-When a backend is introduced, keep the frontend contract stable:
-
-```text
-UI components
-  -> app state/actions
-    -> AppDataRepository interface
-      -> localStorage implementation today
-      -> API implementation later
+# Frontend build check (uses webpack)
+cd frontend
+npm run build
 ```
 
-Recommended backend ownership:
+For UI changes, verify:
 
-- Auth and accounts
-- Database schema
-- Goal CRUD
-- Progress record CRUD
-- Server-side achievement validation
-- Sync and conflict handling
-- Analytics/event tracking
+- `/gacha` draw and naming flow
+- `/home` care actions and stat decay
+- `/leaderboard` public score rows
+- `/settings` profile update
 
-Recommended frontend ownership:
+---
 
-- UI screens and interaction states
-- Form validation and user guidance
-- Optimistic updates
-- Offline/local cache behavior
-- Responsive web experience
-- Shared TypeScript contracts with backend
+## Docs
 
-## Future iOS App Direction
-
-The current Next.js UI should not be treated as the future iOS codebase. Instead, preserve reusable product concepts:
-
-- Reuse the data model shape where practical.
-- Keep product rules in portable TypeScript modules while the web app is the only client.
-- Later, extract shared contracts and game rules into a package such as `packages/core`.
-- Build the iOS UI natively or with React Native, depending on product and team constraints.
-- iOS persistence should use an adapter equivalent to `storage.ts`, not direct localStorage logic.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the suggested evolution path.
-
-## Development Workflow
-
-Before changing behavior:
-
-1. Identify whether the change is UI, product rule, persistence, or data contract.
-2. Put the change in the matching layer.
-3. Run `npm run build`.
-4. For UI/RWD changes, test at least:
-   - mobile: `390x844`
-   - desktop: `1280x800`
-5. Check browser console for runtime errors.
-
-## Deployment
-
-This app is Vercel-ready:
-
-- Framework: Next.js
-- Build command: `npm run build`
-- Output: Next.js default
-- Environment variables: none required for MVP
-- Production URL: [https://pet-app-lyart.vercel.app](https://pet-app-lyart.vercel.app)
-
-Because data is stored in localStorage, deployed users only see data on the same browser/device. This is expected for the MVP.
-
-## Known Limitations
-
-- localStorage is not a multi-device sync solution.
-- Current achievements are rule-based and client-side.
-- No automated test suite exists yet.
-- No backend validation exists yet.
-- No iOS app exists yet.
-
-## Suggested Next Refactors
-
-When the product moves beyond prototype:
-
-1. Add a repository interface for app data persistence.
-2. Add unit tests for `gameLogic.ts`.
-3. Add schema migration helpers for `AppData.version`.
-4. Extract shared contracts into a package if backend or iOS work begins.
-5. Add API routes only after backend requirements are concrete.
+- [`docs/JOSH_HANDOVER.md`](docs/JOSH_HANDOVER.md) — handover notes
