@@ -7,15 +7,24 @@ import AuthStatus from "@/components/AuthStatus";
 import BottomNav from "@/components/BottomNav";
 import PetCanvas from "@/components/PetCanvas";
 import { decayPet, formatRelativeTime, healthScore } from "@/lib/gameLogic";
-import { loadCurrentNekoData, loadLeaderboard, saveCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
+import { loadCurrentNekoData, loadLeaderboard, loadCareStats, loadPerUserCareStats, saveCurrentNekoData, type AuthState, type CareStats, type UserCareStats } from "@/lib/nekoRepository";
 import { upsertPet } from "@/lib/petCollection";
 import type { LeaderboardEntry, NekoData } from "@/types";
+
+const typeLabel: Record<string, string> = {
+  visit_pet: "摸摸",
+  feed: "餵食",
+  bath: "洗澡",
+  play: "玩耍"
+};
 
 export default function LeaderboardPage() {
   const router = useRouter();
   const [data, setData] = useState<NekoData | null>(null);
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [rows, setRows] = useState<LeaderboardEntry[]>([]);
+  const [stats, setStats] = useState<CareStats | null>(null);
+  const [userStats, setUserStats] = useState<UserCareStats[]>([]);
 
   useEffect(() => {
     loadCurrentNekoData().then(async (loaded) => {
@@ -33,6 +42,11 @@ export default function LeaderboardPage() {
       await saveCurrentNekoData(decayed);
       setData(decayed);
       setRows((await loadLeaderboard(decayed)).sort((a, b) => healthScore(b) - healthScore(a)));
+
+      const today = new Date().toISOString().slice(0, 10);
+      const [s, u] = await Promise.all([loadCareStats(today), loadPerUserCareStats(today)]);
+      setStats(s);
+      setUserStats(u);
     });
   }, [router]);
 
@@ -59,10 +73,31 @@ export default function LeaderboardPage() {
           </div>
         </header>
 
+        {stats ? (
+          <section className="mb-5">
+            <h2 className="mb-3 text-lg font-black">今日互動統計</h2>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.total_events}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">照顧總次數</p>
+              </div>
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.unique_users}/{stats.total_users}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">活躍/總人數</p>
+              </div>
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.avg_events_per_user}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">平均次數/人</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-white shadow-[6px_6px_0_#3D2B1F]">
           {rankedRows.map((entry, index) => {
             const score = healthScore(entry);
             const weakest = weakestCare(entry);
+            const userStat = userStats.find((u) => u.username === entry.username);
             return (
               <Link
                 key={entry.id}
@@ -91,9 +126,13 @@ export default function LeaderboardPage() {
                   <p className="truncate text-xs font-bold text-[#8B6F5E]">
                     {entry.petName} · {entry.petType === "cat" ? "貓" : "狗"} · {formatRelativeTime(entry.lastCareAt)}
                   </p>
-                  <p className={`mt-1 truncate text-xs font-black ${weakest.value < 40 ? "text-[#E24B4A]" : "text-[#8B6F5E]"}`}>
-                    {entry.isSelf ? "現在最需要" : "目前最弱"}：{weakest.label} {weakest.value}%
-                  </p>
+                  {userStat ? (
+                    <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">
+                      今日 {userStat.by_type.map((t) => `${typeLabel[t.type] ?? t.type} ${t.count}`).join(" · ")}
+                    </p>
+                  ) : (
+                    <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">今日尚未互動</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className={`text-2xl font-black ${score < 40 ? "text-[#E24B4A]" : "text-[#3D2B1F]"}`}>{score}</p>
@@ -103,6 +142,7 @@ export default function LeaderboardPage() {
             );
           })}
         </section>
+
       </div>
       <BottomNav />
     </main>

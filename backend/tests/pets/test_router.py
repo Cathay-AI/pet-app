@@ -160,8 +160,8 @@ async def test_get_pet_by_id_success(client: AsyncClient):
     assert resp.json()["id"] == pet_id
 
 
-async def test_get_pet_by_id_other_user_is_forbidden(client: AsyncClient):
-    """User B cannot access User A's pet."""
+async def test_get_pet_by_id_other_user_can_view(client: AsyncClient):
+    """Any logged-in user can view another user's pet (for room visits)."""
     token_a = await provision_profile_and_token(client, VALID_USER_A)
     token_b = await provision_profile_and_token(client, VALID_USER_B)
 
@@ -169,7 +169,8 @@ async def test_get_pet_by_id_other_user_is_forbidden(client: AsyncClient):
     pet_id = create_resp.json()["id"]
 
     resp = await client.get(f"{PETS}/{pet_id}", headers=auth_header(token_b))
-    assert resp.status_code == 403
+    assert resp.status_code == 200
+    assert resp.json()["id"] == pet_id
 
 
 async def test_get_pet_by_id_not_found(client: AsyncClient):

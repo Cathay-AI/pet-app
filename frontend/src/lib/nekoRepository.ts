@@ -357,19 +357,18 @@ export async function loadLeaderboard(currentData: NekoData | null): Promise<Lea
 
 export async function loadPublicRoom(petId: string, currentData: NekoData | null = null): Promise<LeaderboardEntry | null> {
   const localData = currentData ?? loadNekoData();
-  
+  const auth = await getAuthState();
+
   try {
     const response = await apiFetch(`/api/v1/pets/${petId}`);
     if (response.ok) {
       const pet = await response.json();
-      // Since public room needs owner username, and /pets/{pet_id} doesn't return username,
-      // we can either fetch leaderboard or fallback to "Neko 用戶". Let's check leaderboard first.
+      const isSelf = pet.user_id === auth.userId;
       const leaderboard = await loadLeaderboard(localData);
       const matched = leaderboard.find(e => e.id === pet.id);
-      if (matched) return matched;
+      if (matched) return { ...matched, isSelf };
 
-      const auth = await getAuthState();
-      return mapPetEntry(pet, "Neko 用戶", pet.user_id === auth.userId);
+      return mapPetEntry(pet, "Neko 用戶", isSelf);
     }
   } catch (err) {
     console.error("Failed to load public room", err);
@@ -488,6 +487,92 @@ export async function removeFriend(friendId: string) {
     throw new Error(err.detail || "刪除好友失敗。");
   }
   return response.json();
+}
+
+// ─── Care Events API ────────────────────────────────────────────────────────
+
+export type CareType = "feed" | "bath" | "play";
+
+export async function logCareEvent(type: CareType): Promise<void> {
+  const auth = await getAuthState();
+  if (!auth.userId) return;
+
+  try {
+    await apiFetch("/api/v1/care-events", {
+      method: "POST",
+      body: JSON.stringify({ type })
+    });
+  } catch (err) {
+    console.warn("Failed to log care event:", err);
+  }
+}
+
+export type VisitPetResult = {
+  message: string;
+  visits_today: number;
+  pet_mood_boost: number;
+};
+
+export async function visitPet(petId: string): Promise<{ data: VisitPetResult | null; error: string | null }> {
+  const auth = await getAuthState();
+  if (!auth.userId) return { data: null, error: "需要登入" };
+
+  try {
+    const response = await apiFetch(`/api/v1/care-events/visit/${petId}`, { method: "POST" });
+    if (!response.ok) {
+      const err = await response.json();
+      return { data: null, error: err.detail || "操作失敗" };
+    }
+    return { data: await response.json(), error: null };
+  } catch (err) {
+    return { data: null, error: "網路錯誤" };
+  }
+}
+
+export type CareStats = {
+  date: string;
+  total_events: number;
+  unique_users: number;
+  total_users: number;
+  avg_events_per_user: number;
+  by_type: { type: string; count: number }[];
+};
+
+export type UserCareStats = {
+  user_id: string;
+  username: string;
+  total_events: number;
+  by_type: { type: string; count: number }[];
+};
+
+export async function loadCareStats(date?: string): Promise<CareStats | null> {
+  const auth = await getAuthState();
+  if (!auth.userId) return null;
+
+  try {
+    const params = date ? `?target_date=${date}` : "";
+    const response = await apiFetch(`/api/v1/care-events/stats${params}`);
+    if (!response.ok) return null;
+    return response.json();
+  } catch (err) {
+    console.warn("Failed to load care stats:", err);
+    return null;
+  }
+}
+
+export async function loadPerUserCareStats(date?: string): Promise<UserCareStats[]> {
+  const auth = await getAuthState();
+  if (!auth.userId) return [];
+
+  try {
+    const params = date ? `?target_date=${date}` : "";
+    const response = await apiFetch(`/api/v1/care-events/stats/users${params}`);
+    if (!response.ok) return [];
+    return response.json();
+  } catch (err) {
+    console.warn("Failed to load per-user care stats:", err);
+    return [];
+  }
 }
 
 // ─── Mapping Helpers ─────────────────────────────────────────────────────────

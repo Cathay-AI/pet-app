@@ -23,6 +23,7 @@ export type PixelIconName =
   | "snack"
   | "home"
   | "rank"
+  | "stats"
   | "user";
 
 export type User = {
