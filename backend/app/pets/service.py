@@ -207,6 +207,7 @@ class PetService:
                 dirty = True
             entry = {
                 "id": pet.id,
+                "user_id": pet.user_id,
                 "username": username,
                 "name": pet.name,
                 "type": pet.type,

@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
           {rankedRows.map((entry, index) => {
             const score = healthScore(entry);
             const weakest = weakestCare(entry);
-            const userStat = userStats.find((u) => u.username === entry.username);
+            const userStat = userStats.find((u) => u.user_id === entry.userId);
             return (
               <Link
                 key={entry.id}

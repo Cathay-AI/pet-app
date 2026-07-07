@@ -599,6 +599,7 @@ function mapPet(pet: DbPet): Pet {
 function mapPetEntry(pet: DbPet, username: string, isSelf: boolean): LeaderboardEntry {
   return {
     id: pet.id,
+    userId: pet.user_id,
     username,
     petName: pet.name,
     petType: pet.type,
@@ -615,6 +616,7 @@ function mapPetEntry(pet: DbPet, username: string, isSelf: boolean): Leaderboard
 function mapLocalPetEntry(user: User, pet: Pet, isSelf: boolean): LeaderboardEntry {
   return {
     id: pet.id,
+    userId: user.id,
     username: user.username,
     petName: pet.name,
     petType: pet.type,

@@ -59,6 +59,7 @@ export type NekoData = {
 
 export type LeaderboardEntry = {
   id: string;
+  userId: string;
   username: string;
   petName: string;
   petType: PetType;

@@ -62,6 +62,7 @@ class LeaderboardPetResponse(BaseModel):
     """Pet data returned in leaderboard including owner's username"""
 
     id: uuid.UUID
+    user_id: uuid.UUID
     username: str
     name: str
     type: PetType
