@@ -1,6 +1,18 @@
 import type { FriendsLeaderboard, SuggestionsResponse } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+// Allow localhost only in development; fail clearly in production when backend URL is missing
+const getBackendUrl = () => {
+  const url = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (!url) {
+    if (process.env.NODE_ENV === "development") {
+      return "http://localhost:8000";
+    }
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is not configured for production");
+  }
+  return url;
+};
+
+const API_BASE = getBackendUrl();
 
 /**
  * Fetch friends leaderboard from backend API

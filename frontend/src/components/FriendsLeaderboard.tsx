@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Link from "next/link";
 import PetCanvas from "@/components/PetCanvas";
 import RankChangeIndicator from "@/components/RankChangeIndicator";
@@ -8,9 +9,15 @@ type FriendsLeaderboardProps = {
   friends: LeaderboardEntry[];
   selfEntry: LeaderboardEntry | null;
   isLoading?: boolean;
+  onSortedEntriesChange?: (entries: LeaderboardEntry[]) => void;
 };
 
-export default function FriendsLeaderboard({ friends, selfEntry, isLoading }: FriendsLeaderboardProps) {
+export default function FriendsLeaderboard({
+  friends,
+  selfEntry,
+  isLoading,
+  onSortedEntriesChange
+}: FriendsLeaderboardProps) {
   if (isLoading) {
     return (
       <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-8 text-center shadow-[6px_6px_0_#3D2B1F]">
@@ -61,6 +68,13 @@ export default function FriendsLeaderboard({ friends, selfEntry, isLoading }: Fr
   });
 
   const sortedEntries = decayedEntries.sort((a, b) => healthScore(b) - healthScore(a));
+
+  // Notify parent of sorted entries for rank history tracking
+  useEffect(() => {
+    if (onSortedEntriesChange && sortedEntries.length > 0) {
+      onSortedEntriesChange(sortedEntries);
+    }
+  }, [sortedEntries, onSortedEntriesChange]);
 
   return (
     <section className="overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-white shadow-[6px_6px_0_#3D2B1F]">

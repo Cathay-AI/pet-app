@@ -6,12 +6,12 @@ import AuthStatus from "@/components/AuthStatus";
 import BottomNav from "@/components/BottomNav";
 import FriendsLeaderboard from "@/components/FriendsLeaderboard";
 import SuggestedUsers from "@/components/SuggestedUsers";
-import { getAuthState, type AuthState } from "@/lib/nekoRepository";
+import { getAuthState, loadCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
 import { fetchFriendsLeaderboard, fetchSuggestions, sendFriendRequest } from "@/lib/leaderboardApi";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useRankHistory } from "@/hooks/useRankHistory";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { FriendsLeaderboard as FriendsLeaderboardType, SuggestedUser } from "@/types";
+import type { FriendsLeaderboard as FriendsLeaderboardType, LeaderboardEntry, SuggestedUser } from "@/types";
 
 export default function LeaderboardPage() {
   const router = useRouter();
@@ -22,20 +22,35 @@ export default function LeaderboardPage() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { calculateRankChanges } = useRankHistory(leaderboard?.friends ?? []);
+  // Track final sorted entries for rank history (after decay and sorting)
+  const [finalSortedEntries, setFinalSortedEntries] = useState<LeaderboardEntry[]>([]);
+  const { calculateRankChanges } = useRankHistory(finalSortedEntries);
+
+  // Handle sorted entries from FriendsLeaderboard component
+  const handleSortedEntriesChange = (entries: LeaderboardEntry[]) => {
+    const entriesWithRankChanges = calculateRankChanges(entries);
+    setFinalSortedEntries(entriesWithRankChanges);
+  };
 
   // Load data function
   const loadData = async () => {
     try {
-      const authState = await getAuthState();
-      setAuth(authState);
+      // Check auth and user/pet data (preserve existing behavior)
+      const loaded = await loadCurrentNekoData();
+      setAuth(loaded.auth);
 
-      if (authState.isConfigured && !authState.userId) {
+      if (loaded.auth.isConfigured && !loaded.auth.userId) {
         router.replace("/login");
         return;
       }
 
-      if (!authState.userId) {
+      // Redirect to gacha if user has no pet (preserve existing onboarding flow)
+      if (!loaded.data.user || !loaded.data.pet) {
+        router.replace("/gacha");
+        return;
+      }
+
+      if (!loaded.auth.userId) {
         setError("請先登入以查看好友排行榜");
         setIsLoadingLeaderboard(false);
         setIsLoadingSuggestions(false);
@@ -66,14 +81,7 @@ export default function LeaderboardPage() {
       setIsLoadingLeaderboard(true);
       try {
         const friendsData = await fetchFriendsLeaderboard(session.access_token);
-
-        // Calculate rank changes
-        const friendsWithChanges = calculateRankChanges(friendsData.friends);
-
-        setLeaderboard({
-          ...friendsData,
-          friends: friendsWithChanges
-        });
+        setLeaderboard(friendsData);
         setError(null);
       } catch (err) {
         console.error("Failed to load friends leaderboard:", err);
@@ -195,9 +203,10 @@ export default function LeaderboardPage() {
 
         {/* Friends Leaderboard */}
         <FriendsLeaderboard
-          friends={leaderboard?.friends ?? []}
+          friends={finalSortedEntries.length > 0 ? finalSortedEntries : leaderboard?.friends ?? []}
           selfEntry={leaderboard?.selfEntry ?? null}
           isLoading={isLoadingLeaderboard}
+          onSortedEntriesChange={handleSortedEntriesChange}
         />
 
         {/* Stats */}
