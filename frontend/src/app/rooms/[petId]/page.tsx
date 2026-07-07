@@ -129,7 +129,7 @@ export default function PublicRoomPage() {
               </p>
             </div>
             <p className="rounded border-2 border-[#3D2B1F] bg-[#F5E6C8] px-2 py-1 text-xs font-black text-[#8B6F5E]">
-              {formatRelativeTime(entry.lastCareAt)}
+              {entry.lastCareAt ? formatRelativeTime(entry.lastCareAt) : "尚未照顧"}
             </p>
           </div>
           <div className="space-y-3">
@@ -196,6 +196,6 @@ function entryToPet(entry: LeaderboardEntry): Pet {
     lastFedAt: null,
     lastBathAt: null,
     lastPlayAt: null,
-    updatedAt: entry.lastCareAt
+    updatedAt: entry.lastCareAt ?? new Date().toISOString()
   };
 }

@@ -124,7 +124,7 @@ export default function LeaderboardPage() {
                 <div className="min-w-0">
                   <p className="truncate text-base font-black">{entry.username}</p>
                   <p className="truncate text-xs font-bold text-[#8B6F5E]">
-                    {entry.petName} · {entry.petType === "cat" ? "貓" : "狗"} · {formatRelativeTime(entry.lastCareAt)}
+                    {entry.petName} · {entry.petType === "cat" ? "貓" : "狗"} · {entry.lastCareAt ? formatRelativeTime(entry.lastCareAt) : "尚未照顧"}
                   </p>
                   {userStat ? (
                     <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">

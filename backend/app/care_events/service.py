@@ -64,8 +64,10 @@ class CareEventService:
         )
         self.db.add(event)
 
+        now = datetime.now(timezone.utc)
         target_pet.mood = min(100, target_pet.mood + VISIT_MOOD_BOOST)
-        target_pet.last_visited_at = datetime.now(timezone.utc)
+        target_pet.last_visited_at = now
+        target_pet.updated_at = now
         self.db.add(target_pet)
 
         await self.db.commit()

@@ -67,7 +67,7 @@ export type LeaderboardEntry = {
   cleanliness: number;
   mood: number;
   isSick: boolean;
-  lastCareAt: string;
+  lastCareAt: string | undefined;
   isSelf?: boolean;
 };
 

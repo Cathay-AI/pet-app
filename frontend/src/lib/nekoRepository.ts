@@ -628,8 +628,8 @@ function mapLocalPetEntry(user: User, pet: Pet, isSelf: boolean): LeaderboardEnt
   };
 }
 
-function latestCareAt(pet: Pick<Pet, "lastFedAt" | "lastBathAt" | "lastPlayAt" | "updatedAt">) {
-  return [pet.lastFedAt, pet.lastBathAt, pet.lastPlayAt, pet.updatedAt]
+function latestCareAt(pet: Pick<Pet, "lastFedAt" | "lastBathAt" | "lastPlayAt">) {
+  return [pet.lastFedAt, pet.lastBathAt, pet.lastPlayAt]
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 }
