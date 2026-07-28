@@ -10,6 +10,9 @@ import type { LeaderboardEntry, Pet, PetAnimation } from "@/types";
 
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
+const SLEEP_START_HOUR = 23;
+const SLEEP_END_HOUR = 7;
+const INACTIVITY_SLEEP_MS = 2 * HOUR_MS;
 
 export type CareDeadline = {
   id: "hunger-low" | "poop" | "dirty" | "mood-low" | "sick";
@@ -68,19 +71,40 @@ export function carePet(pet: Pet, changes: Partial<Pick<Pet, "hunger" | "cleanli
   };
 }
 
-export function getPetMoodState(pet: Pet): PetAnimation {
+export function getPetMoodState(pet: Pet, now = new Date()): PetAnimation {
   if (pet.isSick || pet.hunger === 0 || pet.cleanliness === 0 || pet.mood === 0) return "sick";
   if (pet.hunger < 40 || pet.cleanliness < 40 || pet.mood < 40) return "sad";
+  if (shouldPetSleep(pet, now)) return "sleeping";
   if (pet.hunger > 70 && pet.cleanliness > 70 && pet.mood > 70) return "happy";
   return "idle";
 }
 
-export function petStatusText(pet: Pet) {
+export function shouldPetSleep(pet: Pet, now = new Date()) {
+  return isSleepHour(now) || hasLongCareInactivity(pet, now);
+}
+
+function isSleepHour(now: Date) {
+  const hour = now.getHours();
+  return hour >= SLEEP_START_HOUR || hour < SLEEP_END_HOUR;
+}
+
+function hasLongCareInactivity(pet: Pet, now: Date) {
+  const interactionTimes = [pet.lastFedAt, pet.lastBathAt, pet.lastPlayAt]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value));
+  const lastInteraction = interactionTimes.length ? Math.max(...interactionTimes) : new Date(pet.updatedAt).getTime();
+
+  return Number.isFinite(lastInteraction) && now.getTime() - lastInteraction >= INACTIVITY_SLEEP_MS;
+}
+
+export function petStatusText(pet: Pet, now = new Date()) {
   if (pet.isSick) return `${pet.name} 生病了，需要治療`;
   if (pet.hunger === 0 || pet.cleanliness === 0 || pet.mood === 0) return `${pet.name} 很虛弱`;
   if (pet.hunger < HUNGER_DANGER_THRESHOLD) return `${pet.name} 肚子很餓`;
   if (pet.cleanliness < 20) return `${pet.name} 需要洗香香`;
   if (pet.hunger < 40 || pet.cleanliness < 40 || pet.mood < 40) return `${pet.name} 有點難過`;
+  if (shouldPetSleep(pet, now)) return `${pet.name} 睡著了`;
   if (pet.hunger > 70 && pet.cleanliness > 70 && pet.mood > 70) return `${pet.name} 很開心`;
   return `${pet.name} 正在看著你`;
 }
