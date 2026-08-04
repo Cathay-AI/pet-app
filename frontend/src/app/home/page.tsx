@@ -21,7 +21,7 @@ import {
   petStatusText,
   remainingCooldown
 } from "@/lib/gameLogic";
-import { loadCurrentNekoData, saveCurrentNekoData } from "@/lib/nekoRepository";
+import { loadCurrentNekoData, logCareEvent, saveCurrentNekoData } from "@/lib/nekoRepository";
 import { upsertPet } from "@/lib/petCollection";
 import type { Food, NekoData, Pet, PetAnimation, PixelIconName } from "@/types";
 
@@ -134,6 +134,7 @@ export default function HomePage() {
       setShowFood(false);
       return;
     }
+    void logCareEvent("feed");
     const actionNow = new Date();
     setFlyingFood(food.icon);
     updatePet(
@@ -173,6 +174,7 @@ export default function HomePage() {
 
   function play() {
     if (!canPlay(pet)) return;
+    void logCareEvent("play");
     const actionNow = new Date();
     updatePet(
       (current) => {

@@ -9,7 +9,7 @@ import PetCanvas from "@/components/PetCanvas";
 import PixelRoom from "@/components/PixelRoom";
 import StatusBar from "@/components/StatusBar";
 import { formatRelativeTime, getPetMoodState, healthScore, petStatusText } from "@/lib/gameLogic";
-import { loadCurrentNekoData, loadPublicRoom } from "@/lib/nekoRepository";
+import { loadCurrentNekoData, loadPublicRoom, visitPet } from "@/lib/nekoRepository";
 import type { LeaderboardEntry, Pet } from "@/types";
 
 export default function PublicRoomPage() {
@@ -18,6 +18,9 @@ export default function PublicRoomPage() {
   const petId = useMemo(() => decodeURIComponent(params.petId), [params.petId]);
   const [entry, setEntry] = useState<LeaderboardEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [visitMsg, setVisitMsg] = useState("");
+  const [visiting, setVisiting] = useState(false);
+  const [jumpAnim, setJumpAnim] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,11 +102,11 @@ export default function PublicRoomPage() {
           <PixelRoom cleanliness={entry.cleanliness} hunger={entry.hunger} mood={entry.mood} />
           <div className="relative z-10 min-h-72">
             <div className="pet-walk-area">
-              <div className={`pet-walker ${entry.isSick ? "pet-walker-rest" : "pet-walker-walk"} rounded-md`}>
+              <div className={`pet-walker ${jumpAnim ? "pet-visit-jump" : entry.isSick ? "pet-walker-rest" : "pet-walker-walk"} rounded-md`}>
                 <PetCanvas
                   type={entry.petType}
                   color={entry.petColor}
-                  animation={entry.isSick ? "sick" : animation === "sick" ? "sad" : "walking"}
+                  animation={jumpAnim ? "happy" : entry.isSick ? "sick" : animation === "sick" ? "sad" : "walking"}
                   hunger={entry.hunger}
                   cleanliness={entry.cleanliness}
                   size={160}
@@ -121,10 +124,12 @@ export default function PublicRoomPage() {
           <div className="mb-4 grid grid-cols-[1fr_auto] items-start gap-3 rounded-md border-2 border-[#3D2B1F] bg-[#FDF8F0] p-3">
             <div>
               <p className="text-xs font-black text-[#8B6F5E]">拜訪中</p>
-              <p className="text-sm font-black leading-tight">照顧要交給主人，你只能看看牠過得好不好。</p>
+              <p className="text-sm font-black leading-tight">
+                {entry.isSelf ? "這是你自己的房間。" : "摸摸牠，讓牠開心一點。"}
+              </p>
             </div>
             <p className="rounded border-2 border-[#3D2B1F] bg-[#F5E6C8] px-2 py-1 text-xs font-black text-[#8B6F5E]">
-              {formatRelativeTime(entry.lastCareAt)}
+              {entry.lastCareAt ? formatRelativeTime(entry.lastCareAt) : "尚未照顧"}
             </p>
           </div>
           <div className="space-y-3">
@@ -139,7 +144,36 @@ export default function PublicRoomPage() {
             >
               回家照顧牠
             </Link>
-          ) : null}
+          ) : (
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={visiting}
+                onClick={async () => {
+                  setVisiting(true);
+                  setVisitMsg("");
+                  const { data, error } = await visitPet(petId);
+                  if (error) {
+                    setVisitMsg(error);
+                  } else if (data) {
+                    setJumpAnim(true);
+                    setTimeout(() => setJumpAnim(false), 2000);
+                    setVisitMsg(`${entry.petName} 開心地蹭了蹭你！(心情 +${data.pet_mood_boost}) 今日已摸 ${data.visits_today}/3`);
+                    setEntry((prev) => prev ? { ...prev, mood: Math.min(100, prev.mood + data.pet_mood_boost) } : prev);
+                  }
+                  setVisiting(false);
+                }}
+                className="w-full rounded-md border-4 border-[#3D2B1F] bg-[#7F77DD] px-4 py-3 text-center text-sm font-black text-white shadow-[4px_4px_0_#3D2B1F] active:translate-y-1 disabled:opacity-50"
+              >
+                {visiting ? "摸摸中..." : "摸摸牠"}
+              </button>
+              {visitMsg ? (
+                <p className="mt-2 rounded-md border-2 border-[#D4A96A] bg-[#FDF8F0] px-3 py-2 text-center text-xs font-black text-[#3D2B1F]">
+                  {visitMsg}
+                </p>
+              ) : null}
+            </div>
+          )}
         </section>
       </div>
       <BottomNav />
@@ -162,6 +196,6 @@ function entryToPet(entry: LeaderboardEntry): Pet {
     lastFedAt: null,
     lastBathAt: null,
     lastPlayAt: null,
-    updatedAt: entry.lastCareAt
+    updatedAt: entry.lastCareAt ?? new Date().toISOString()
   };
 }

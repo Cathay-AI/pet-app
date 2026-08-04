@@ -46,6 +46,7 @@ export const SICK_GRACE_MS = 2 * 60 * 60 * 1000;
 export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   {
     id: "jason",
+    userId: "fake-jason",
     username: "Jason",
     petName: "Kiki",
     petType: "cat",
@@ -58,6 +59,7 @@ export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   },
   {
     id: "nico",
+    userId: "fake-nico",
     username: "Nico",
     petName: "Dango",
     petType: "dog",
@@ -70,6 +72,7 @@ export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   },
   {
     id: "mei",
+    userId: "fake-mei",
     username: "小美",
     petName: "Maru",
     petType: "cat",
@@ -82,6 +85,7 @@ export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   },
   {
     id: "hao",
+    userId: "fake-hao",
     username: "阿豪",
     petName: "Panda",
     petType: "dog",
@@ -94,6 +98,7 @@ export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   },
   {
     id: "luna",
+    userId: "fake-luna",
     username: "Luna",
     petName: "Mochi",
     petType: "cat",
@@ -106,6 +111,7 @@ export const FAKE_LEADERBOARD: LeaderboardEntry[] = [
   },
   {
     id: "riku",
+    userId: "fake-riku",
     username: "Riku",
     petName: "Sora",
     petType: "dog",

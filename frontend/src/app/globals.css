@@ -674,6 +674,43 @@ button:disabled {
   width: 90%;
 }
 
+.pet-visit-jump {
+  animation: visit-jump-spin 2s ease-in-out;
+}
+
+@keyframes visit-jump-spin {
+  0% {
+    transform: translateX(-50%) translateY(0) scaleX(1);
+  }
+  8% {
+    transform: translateX(-50%) translateY(0.3rem) scaleX(1) scaleY(0.9);
+  }
+  20% {
+    transform: translateX(-50%) translateY(-2.5rem) scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(1);
+  }
+  42% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(-1);
+  }
+  55% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(-1);
+  }
+  62% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(1);
+  }
+  75% {
+    transform: translateX(-50%) translateY(-1rem) scaleX(1);
+  }
+  88% {
+    transform: translateX(-50%) translateY(0) scaleX(1) scaleY(0.92);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scaleX(1) scaleY(1);
+  }
+}
+
 @keyframes gacha-shake {
   0%,
   100% {

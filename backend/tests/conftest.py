@@ -22,6 +22,7 @@ from app.core.database import Base, get_db
 from app.main import app as fastapi_app
 
 # Import all models so SQLAlchemy knows about every table before create_all
+import app.care_events.model  # noqa: F401
 import app.pets.pet  # noqa: F401
 import app.users.friendship  # noqa: F401
 import app.users.profile  # noqa: F401
