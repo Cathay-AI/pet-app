@@ -1,23 +1,40 @@
-import { useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import PetCanvas from "@/components/PetCanvas";
 import RankChangeIndicator from "@/components/RankChangeIndicator";
-import { decayPet, formatRelativeTime, healthScore } from "@/lib/gameLogic";
-import type { LeaderboardEntry, Pet } from "@/types";
+import { formatRelativeTime, healthScore } from "@/lib/gameLogic";
+import { useRankHistory } from "@/hooks/useRankHistory";
+import type { UserCareStats } from "@/lib/nekoRepository";
+import type { LeaderboardEntry } from "@/types";
 
 type FriendsLeaderboardProps = {
   friends: LeaderboardEntry[];
   selfEntry: LeaderboardEntry | null;
   isLoading?: boolean;
-  onSortedEntriesChange?: (entries: LeaderboardEntry[]) => void;
+  userStats?: UserCareStats[];
+};
+
+const typeLabel: Record<string, string> = {
+  visit_pet: "摸摸",
+  feed: "餵食",
+  bath: "洗澡",
+  play: "玩耍"
 };
 
 export default function FriendsLeaderboard({
   friends,
   selfEntry,
   isLoading,
-  onSortedEntriesChange
+  userStats = []
 }: FriendsLeaderboardProps) {
+  const sortedEntries = useMemo(() => {
+    const allEntries = selfEntry && !friends.some((entry) => entry.id === selfEntry.id)
+      ? [...friends, selfEntry]
+      : friends;
+    return [...allEntries].sort((a, b) => healthScore(b) - healthScore(a));
+  }, [friends, selfEntry]);
+  const rankedEntries = useRankHistory(sortedEntries);
+
   if (isLoading) {
     return (
       <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-8 text-center shadow-[6px_6px_0_#3D2B1F]">
@@ -26,7 +43,7 @@ export default function FriendsLeaderboard({
     );
   }
 
-  if (friends.length === 0) {
+  if (rankedEntries.length === 0) {
     return (
       <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-8 text-center shadow-[6px_6px_0_#3D2B1F]">
         <p className="text-lg font-black">還沒有好友</p>
@@ -35,52 +52,12 @@ export default function FriendsLeaderboard({
     );
   }
 
-  const allEntries = selfEntry && !friends.some((f) => f.id === selfEntry.id) ? [...friends, selfEntry] : friends;
-
-  // Apply real-time decay to all entries for accurate health scores
-  const decayedEntries = allEntries.map((entry) => {
-    const petData: Pet = {
-      id: entry.id,
-      userId: entry.id, // Not used in decay calculation
-      name: entry.petName,
-      type: entry.petType,
-      color: entry.petColor,
-      hunger: entry.hunger,
-      cleanliness: entry.cleanliness,
-      mood: entry.mood,
-      isSick: entry.isSick,
-      zeroSinceAt: null,
-      lastFedAt: null,
-      lastBathAt: null,
-      lastPlayAt: null,
-      updatedAt: new Date(entry.lastCareAt).toISOString()
-    };
-
-    const decayed = decayPet(petData);
-
-    return {
-      ...entry,
-      hunger: decayed.hunger,
-      cleanliness: decayed.cleanliness,
-      mood: decayed.mood,
-      isSick: decayed.isSick
-    };
-  });
-
-  const sortedEntries = decayedEntries.sort((a, b) => healthScore(b) - healthScore(a));
-
-  // Notify parent of sorted entries for rank history tracking
-  useEffect(() => {
-    if (onSortedEntriesChange && sortedEntries.length > 0) {
-      onSortedEntriesChange(sortedEntries);
-    }
-  }, [sortedEntries, onSortedEntriesChange]);
-
   return (
     <section className="overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-white shadow-[6px_6px_0_#3D2B1F]">
-      {sortedEntries.map((entry, index) => {
+      {rankedEntries.map((entry, index) => {
         const score = healthScore(entry);
         const weakest = weakestCare(entry);
+        const userStat = userStats.find((stats) => stats.user_id === entry.userId);
         const currentRank = index + 1; // Use index-based rank after sorting
         const isDangerous = entry.isSick || score < 30;
 
@@ -101,7 +78,7 @@ export default function FriendsLeaderboard({
             <div className="text-center">
               <p className="text-lg font-black">{rankLabel(currentRank)}</p>
               <div className="mt-0.5 flex justify-center">
-                <RankChangeIndicator rankChange={entry.rankChange} previousRank={entry.rank} />
+                <RankChangeIndicator rankChange={entry.rankChange} />
               </div>
               {entry.isSelf ? <p className="mt-1 text-xs font-black text-[#E8734A]">▶ 你</p> : null}
             </div>
@@ -138,9 +115,16 @@ export default function FriendsLeaderboard({
                   weakest.value < 30 ? "text-[#E24B4A]" : "text-[#8B6F5E]"
                 }`}
               >
-                {formatRelativeTime(entry.lastCareAt)}
+                {entry.lastCareAt ? formatRelativeTime(entry.lastCareAt) : "尚未照顧"}
                 {weakest.value < 40 ? ` · ${weakest.label} ${weakest.value}%` : ""}
               </p>
+              {userStat ? (
+                <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">
+                  今日 {userStat.by_type.map((item) => `${typeLabel[item.type] ?? item.type} ${item.count}`).join(" · ")}
+                </p>
+              ) : (
+                <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">今日尚未互動</p>
+              )}
             </div>
 
             {/* Health Score */}

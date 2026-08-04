@@ -1,9 +1,8 @@
 type RankChangeIndicatorProps = {
   rankChange?: number;
-  previousRank?: number;
 };
 
-export default function RankChangeIndicator({ rankChange, previousRank }: RankChangeIndicatorProps) {
+export default function RankChangeIndicator({ rankChange }: RankChangeIndicatorProps) {
   if (rankChange === undefined || rankChange === null) {
     // New entry
     return (
@@ -27,7 +26,7 @@ export default function RankChangeIndicator({ rankChange, previousRank }: RankCh
     return (
       <span
         className="inline-flex items-center gap-0.5 text-xs font-black text-[#4CAF50]"
-        title={`從第 ${previousRank} 名上升`}
+        title={`排名上升 ${rankChange} 名`}
       >
         <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -45,7 +44,7 @@ export default function RankChangeIndicator({ rankChange, previousRank }: RankCh
   return (
     <span
       className="inline-flex items-center gap-0.5 text-xs font-black text-[#E24B4A]"
-      title={`從第 ${previousRank} 名下降`}
+      title={`排名下降 ${Math.abs(rankChange)} 名`}
     >
       <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
         <path

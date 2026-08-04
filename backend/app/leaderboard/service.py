@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.users.profile import Profile
 from app.users.friendship import Friendship
 from app.pets.pet import Pet as PetModel
+from app.pets.service import apply_decay
 from app.leaderboard.schemas import (
     LeaderboardPetEntry,
     FriendsLeaderboardResponse,
@@ -77,7 +78,12 @@ class LeaderboardService:
 
         # Convert to leaderboard entries
         entries = []
+        now = datetime.now(UTC)
+        dirty = False
         for pet, profile in rows:
+            if apply_decay(pet, now):
+                self.db.add(pet)
+                dirty = True
             health_score = self._calculate_health_score(
                 pet.hunger, pet.cleanliness, pet.mood, pet.is_sick
             )
@@ -107,6 +113,9 @@ class LeaderboardService:
         # Assign ranks
         for rank, entry in enumerate(entries, start=1):
             entry.rank = rank
+
+        if dirty:
+            await self.db.commit()
 
         # Get current user's pet
         self_pet = await self._get_user_pet_entry(current_user.id, is_self=True)
@@ -149,26 +158,32 @@ class LeaderboardService:
             excluded_ids.add(friendship.requester_id)
             excluded_ids.add(friendship.addressee_id)
 
-        # Get active users with healthy pets (simple algorithm)
-        # TODO: Implement more sophisticated recommendation algorithm
+        # Fetch recent candidates, then apply server-side decay before deciding
+        # whether they are healthy enough to recommend.
         suggestions_query = (
             select(PetModel, Profile)
             .join(Profile, PetModel.user_id == Profile.id)
             .where(
                 and_(
                     PetModel.user_id.notin_(excluded_ids),
-                    PetModel.is_sick == False,  # noqa: E712
-                    PetModel.hunger >= 50,
+                    Profile.friend_code.is_not(None),
                 )
             )
             .order_by(PetModel.updated_at.desc())
-            .limit(limit)
+            .limit(limit * 5)
         )
         result = await self.db.execute(suggestions_query)
         rows = result.all()
 
         suggestions = []
+        now = datetime.now(UTC)
+        dirty = False
         for pet, profile in rows:
+            if apply_decay(pet, now):
+                self.db.add(pet)
+                dirty = True
+            if pet.is_sick or pet.hunger < 50:
+                continue
             health_score = self._calculate_health_score(
                 pet.hunger, pet.cleanliness, pet.mood, pet.is_sick
             )
@@ -185,6 +200,11 @@ class LeaderboardService:
                     reason="Active and caring player"
                 )
             )
+            if len(suggestions) == limit:
+                break
+
+        if dirty:
+            await self.db.commit()
 
         return SuggestionsResponse(
             suggestions=suggestions,
@@ -210,6 +230,9 @@ class LeaderboardService:
             return None
 
         pet, profile = row
+        if apply_decay(pet):
+            self.db.add(pet)
+            await self.db.commit()
         health_score = self._calculate_health_score(
             pet.hunger, pet.cleanliness, pet.mood, pet.is_sick
         )
@@ -232,13 +255,12 @@ class LeaderboardService:
             is_friend=False,
         )
 
-    def _get_last_care_time(self, pet: PetModel) -> datetime:
+    def _get_last_care_time(self, pet: PetModel) -> datetime | None:
         """Get the most recent care timestamp from a pet."""
         times = [
             pet.last_fed_at,
             pet.last_bath_at,
             pet.last_play_at,
-            pet.updated_at
         ]
         valid_times = [t for t in times if t is not None]
-        return max(valid_times) if valid_times else pet.updated_at
+        return max(valid_times) if valid_times else None

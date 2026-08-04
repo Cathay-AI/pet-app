@@ -12,13 +12,11 @@ const getBackendUrl = () => {
   return url;
 };
 
-const API_BASE = getBackendUrl();
-
 /**
  * Fetch friends leaderboard from backend API
  */
 export async function fetchFriendsLeaderboard(token: string): Promise<FriendsLeaderboard> {
-  const response = await fetch(`${API_BASE}/api/v1/leaderboard/friends`, {
+  const response = await fetch(`${getBackendUrl()}/api/v1/leaderboard/friends`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json"
@@ -35,6 +33,7 @@ export async function fetchFriendsLeaderboard(token: string): Promise<FriendsLea
   return {
     friends: data.friends.map((entry: any) => ({
       id: entry.id,
+      userId: entry.user_id,
       username: entry.username,
       petName: entry.pet_name,
       petType: entry.pet_type,
@@ -53,6 +52,7 @@ export async function fetchFriendsLeaderboard(token: string): Promise<FriendsLea
     selfEntry: data.self_entry
       ? {
           id: data.self_entry.id,
+          userId: data.self_entry.user_id,
           username: data.self_entry.username,
           petName: data.self_entry.pet_name,
           petType: data.self_entry.pet_type,
@@ -75,7 +75,7 @@ export async function fetchFriendsLeaderboard(token: string): Promise<FriendsLea
  * Fetch suggested users from backend API
  */
 export async function fetchSuggestions(token: string, limit = 10): Promise<SuggestionsResponse> {
-  const response = await fetch(`${API_BASE}/api/v1/leaderboard/suggestions?limit=${limit}`, {
+  const response = await fetch(`${getBackendUrl()}/api/v1/leaderboard/suggestions?limit=${limit}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json"
@@ -108,7 +108,7 @@ export async function fetchSuggestions(token: string, limit = 10): Promise<Sugge
  * Send friend request via friend code
  */
 export async function sendFriendRequest(token: string, friendCode: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/v1/users/me/friends`, {
+  const response = await fetch(`${getBackendUrl()}/api/v1/users/me/friends`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -51,9 +51,9 @@ button:disabled {
 
 .food-flight {
   animation: food-flight 1.05s steps(8, end) both;
-  left: 3rem;
+  left: 4rem;
   position: absolute;
-  top: 5rem;
+  top: 12rem;
   z-index: 24;
 }
 
@@ -65,44 +65,47 @@ button:disabled {
 }
 
 .stage-effect span {
-  image-rendering: pixelated;
+  image-rendering: auto;
   position: absolute;
 }
 
 .stage-food-pop {
   animation: stage-food-pop 1.35s steps(7, end) both;
-  left: 3.5rem;
-  top: 4.8rem;
+  left: 3.8rem;
+  top: 13rem;
 }
 
 .stage-bite {
   animation: stage-bite 1.2s steps(5, end) both;
-  background: #f7d46a;
-  height: 4px;
-  width: 4px;
+  background: rgba(255, 220, 117, 0.88);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(255, 220, 117, 0.5);
+  height: 6px;
+  width: 6px;
 }
 
 .stage-bite-1 {
-  bottom: 4.6rem;
+  bottom: 12rem;
   left: 46%;
 }
 
 .stage-bite-2 {
   animation-delay: 110ms;
-  bottom: 4.9rem;
+  bottom: 12.4rem;
   left: 52%;
 }
 
 .stage-bite-3 {
   animation-delay: 210ms;
-  bottom: 4.2rem;
+  bottom: 11.7rem;
   left: 49%;
 }
 
 .stage-bowl-shine {
   animation: stage-bowl-shine 1.35s steps(4, end) both;
-  background: #fdf8f0;
-  bottom: 4.35rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  bottom: 11.6rem;
   height: 4px;
   left: 44%;
   width: 3.8rem;
@@ -110,8 +113,10 @@ button:disabled {
 
 .stage-bubble {
   animation: stage-bubble-rise 1.7s steps(8, end) both;
-  background: #ddf4ff;
-  border: 2px solid #fdf8f0;
+  background: rgba(221, 244, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.48), 0 0 12px rgba(141, 199, 232, 0.36);
   height: 14px;
   width: 14px;
 }
@@ -183,7 +188,8 @@ button:disabled {
 
 .stage-splash {
   animation: stage-splash 780ms steps(5, end) both;
-  background: #8dc7e8;
+  background: rgba(141, 199, 232, 0.72);
+  border-radius: 999px;
   height: 6px;
   top: 62%;
   width: 34px;
@@ -202,7 +208,8 @@ button:disabled {
 .stage-broom {
   animation: stage-broom 1.2s steps(6, end) both;
   background: #8b6f5e;
-  bottom: 4.6rem;
+  border-radius: 999px;
+  bottom: 12rem;
   height: 9px;
   left: 2.2rem;
   width: 4.4rem;
@@ -210,6 +217,7 @@ button:disabled {
 
 .stage-broom::before {
   background: #d4a96a;
+  border-radius: 999px;
   content: "";
   height: 3.8rem;
   left: 3.8rem;
@@ -222,8 +230,9 @@ button:disabled {
 
 .stage-clean-swipe {
   animation: stage-clean-swipe 1.1s steps(6, end) both;
-  background: #f5e6c8;
-  bottom: 4.4rem;
+  background: rgba(255, 246, 224, 0.8);
+  border-radius: 999px;
+  bottom: 11.7rem;
   height: 5px;
   width: 62px;
 }
@@ -239,33 +248,37 @@ button:disabled {
 
 .stage-sparkle {
   animation: stage-sparkle 1.35s steps(6, end) both;
-  background: #fdf8f0;
-  height: 6px;
-  width: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(255, 246, 224, 0.72);
+  height: 7px;
+  width: 7px;
 }
 
 .stage-sparkle-1 {
-  bottom: 4.2rem;
+  bottom: 11.7rem;
   left: 28%;
 }
 
 .stage-sparkle-2 {
   animation-delay: 180ms;
-  bottom: 5rem;
+  bottom: 12.4rem;
   left: 58%;
 }
 
 .stage-sparkle-3 {
   animation-delay: 330ms;
-  bottom: 3.5rem;
+  bottom: 11.1rem;
   left: 74%;
 }
 
 .stage-ball {
   animation: stage-ball-bounce 1.35s steps(8, end) both;
   background: #5dcaa5;
-  border: 4px solid #3d2b1f;
-  bottom: 4.4rem;
+  border: 3px solid rgba(61, 43, 31, 0.82);
+  border-radius: 999px;
+  box-shadow: 3px 5px 8px rgba(61, 43, 31, 0.22);
+  bottom: 11.8rem;
   height: 32px;
   left: 2.5rem;
   width: 32px;
@@ -273,6 +286,7 @@ button:disabled {
 
 .stage-ball::after {
   background: #f7d46a;
+  border-radius: 999px;
   content: "";
   height: 6px;
   left: 7px;
@@ -284,6 +298,7 @@ button:disabled {
 .stage-heart {
   animation: stage-heart-float 1.45s steps(7, end) both;
   background: #f06f8f;
+  box-shadow: 0 0 12px rgba(240, 111, 143, 0.32);
   height: 12px;
   width: 12px;
 }
@@ -501,15 +516,15 @@ button:disabled {
 }
 
 .pet-walk-area {
-  bottom: 3.7rem;
+  bottom: 6.4rem;
   left: 0;
   position: absolute;
   right: 0;
-  top: 0;
+  top: 10rem;
 }
 
 .pet-walker {
-  bottom: -0.4rem;
+  bottom: 0.2rem;
   display: grid;
   left: 50%;
   place-items: center;
@@ -523,12 +538,177 @@ button:disabled {
 }
 
 .pet-walker-walk {
-  animation: pet-room-walk 16s linear infinite;
+  animation: none;
 }
 
-.pet-walker-walk canvas {
-  animation: pet-walk-steps 16s steps(1, end) infinite;
+.home-scene-background {
+  image-rendering: auto;
+}
+
+.home-pet-sprite {
+  display: block;
+  filter: drop-shadow(0 18px 12px rgba(61, 43, 31, 0.3));
+  position: relative;
   transform-origin: center bottom;
+}
+
+.home-pet-sprite-image {
+  display: block;
+  height: 100%;
+  image-rendering: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  width: 100%;
+}
+
+.home-pet-sprite-stage {
+  display: block;
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+
+.home-pet-sprite-frame {
+  animation-duration: 1.6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: steps(1, end);
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.home-pet-sprite-frame-0 {
+  animation-name: home-pet-frame-0;
+  opacity: 1;
+}
+
+.home-pet-sprite-frame-1 {
+  animation-name: home-pet-frame-1;
+}
+
+.home-pet-sprite-frame-2 {
+  animation-name: home-pet-frame-2;
+}
+
+.home-pet-sprite-frame-3 {
+  animation-name: home-pet-frame-3;
+}
+
+.home-pet-canvas-fallback {
+  display: grid;
+  height: 100%;
+  image-rendering: pixelated;
+  place-items: center;
+  width: 100%;
+}
+
+.home-pet-sprite-idle,
+.home-pet-sprite-walking {
+  animation: home-pet-idle 3.2s ease-in-out infinite;
+}
+
+.home-pet-sprite-framed.home-pet-sprite-idle,
+.home-pet-sprite-framed.home-pet-sprite-walking {
+  animation: none;
+}
+
+.home-pet-sprite-happy .home-pet-sprite-frame,
+.home-pet-sprite-bathing .home-pet-sprite-frame {
+  animation-duration: 900ms;
+}
+
+.home-pet-sprite-happy,
+.home-pet-sprite-bathing {
+  animation: home-pet-happy 900ms ease-in-out infinite;
+}
+
+.home-pet-sprite-framed.home-pet-sprite-happy,
+.home-pet-sprite-framed.home-pet-sprite-bathing {
+  animation: none;
+}
+
+.home-pet-sprite-sad {
+  animation: home-pet-sad 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 18px 12px rgba(61, 43, 31, 0.25)) saturate(0.78) brightness(0.92);
+}
+
+.home-pet-sprite-sick {
+  animation: home-pet-sick 1.25s ease-in-out infinite;
+  filter: grayscale(0.5) saturate(0.7) drop-shadow(0 18px 12px rgba(61, 43, 31, 0.24));
+}
+
+.home-pet-sprite-sleeping {
+  animation: home-pet-sleeping 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 14px 10px rgba(61, 43, 31, 0.22)) saturate(0.85);
+}
+
+.home-pet-sprite-eating {
+  animation: home-pet-eating 760ms ease-in-out infinite;
+}
+
+.home-pet-dirt {
+  background: rgba(111, 69, 45, 0.48);
+  border-radius: 999px;
+  box-shadow:
+    3.2rem 2.8rem 0 rgba(111, 69, 45, 0.42),
+    -2.2rem 3.4rem 0 rgba(111, 69, 45, 0.38);
+  height: 9%;
+  left: 32%;
+  pointer-events: none;
+  position: absolute;
+  top: 45%;
+  transform: rotate(-12deg);
+  width: 18%;
+}
+
+.home-pet-dirt-heavy::after {
+  background: rgba(83, 58, 43, 0.42);
+  border-radius: 999px;
+  box-shadow: 3.6rem 3rem 0 rgba(83, 58, 43, 0.36);
+  content: "";
+  height: 70%;
+  left: 4.4rem;
+  position: absolute;
+  top: 4.6rem;
+  width: 90%;
+}
+
+.pet-visit-jump {
+  animation: visit-jump-spin 2s ease-in-out;
+}
+
+@keyframes visit-jump-spin {
+  0% {
+    transform: translateX(-50%) translateY(0) scaleX(1);
+  }
+  8% {
+    transform: translateX(-50%) translateY(0.3rem) scaleX(1) scaleY(0.9);
+  }
+  20% {
+    transform: translateX(-50%) translateY(-2.5rem) scaleX(1) scaleY(1);
+  }
+  35% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(1);
+  }
+  42% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(-1);
+  }
+  55% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(-1);
+  }
+  62% {
+    transform: translateX(-50%) translateY(-2.8rem) scaleX(1);
+  }
+  75% {
+    transform: translateX(-50%) translateY(-1rem) scaleX(1);
+  }
+  88% {
+    transform: translateX(-50%) translateY(0) scaleX(1) scaleY(0.92);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scaleX(1) scaleY(1);
+  }
 }
 
 @keyframes gacha-shake {
@@ -547,38 +727,38 @@ button:disabled {
 @keyframes food-flight {
   0% {
     opacity: 0;
-    transform: translate(-52px, 58px) scale(1);
+    transform: translate(-52px, 210px) scale(1);
   }
   20% {
     opacity: 1;
-    transform: translate(-22px, 32px) scale(1.15);
+    transform: translate(-22px, 168px) scale(1.15);
   }
   65% {
     opacity: 1;
-    transform: translate(152px, 112px) scale(0.58);
+    transform: translate(156px, 152px) scale(0.58);
   }
   100% {
     opacity: 0;
-    transform: translate(170px, 120px) scale(0.25);
+    transform: translate(178px, 150px) scale(0.25);
   }
 }
 
 @keyframes stage-food-pop {
   0% {
     opacity: 0;
-    transform: translate(-18px, 28px) scale(0.85);
+    transform: translate(-18px, 150px) scale(0.85);
   }
   20% {
     opacity: 1;
-    transform: translate(10px, 8px) scale(1.1);
+    transform: translate(10px, 116px) scale(1.1);
   }
   72% {
     opacity: 1;
-    transform: translate(146px, 108px) scale(0.48);
+    transform: translate(146px, 128px) scale(0.48);
   }
   100% {
     opacity: 0;
-    transform: translate(160px, 116px) scale(0.25);
+    transform: translate(160px, 130px) scale(0.25);
   }
 }
 
@@ -837,18 +1017,147 @@ button:disabled {
   }
 }
 
+@keyframes home-pet-idle {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-5px) scaleY(1.015);
+  }
+}
+
+@keyframes home-pet-happy {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  35% {
+    transform: translateY(-13px) rotate(-2deg) scale(1.03);
+  }
+  65% {
+    transform: translateY(-8px) rotate(2deg) scale(1.02);
+  }
+}
+
+@keyframes home-pet-sad {
+  0%,
+  100% {
+    transform: translateY(4px) scaleY(0.98);
+  }
+  50% {
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes home-pet-sick {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(1deg);
+  }
+}
+
+@keyframes home-pet-sleeping {
+  0%,
+  100% {
+    transform: translateY(8px) rotate(-1deg) scaleY(0.96);
+  }
+  50% {
+    transform: translateY(4px) rotate(-1deg) scaleY(0.98);
+  }
+}
+
+@keyframes home-pet-eating {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+  45% {
+    transform: translateY(6px) scaleX(1.025) scaleY(0.975);
+  }
+}
+
+@keyframes home-pet-frame-0 {
+  0%,
+  24.99% {
+    opacity: 1;
+  }
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes home-pet-frame-1 {
+  0%,
+  24.99% {
+    opacity: 0;
+  }
+  25%,
+  49.99% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes home-pet-frame-2 {
+  0%,
+  49.99% {
+    opacity: 0;
+  }
+  50%,
+  74.99% {
+    opacity: 1;
+  }
+  75%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes home-pet-frame-3 {
+  0%,
+  74.99% {
+    opacity: 0;
+  }
+  75%,
+  99.99% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .food-flight,
   .poop-cleanup-button,
   .poop-cleanup-smell,
   .dirty-room-signal-stink,
   .poop-stink-line,
-  .stage-effect span {
+  .stage-effect span,
+  .home-pet-sprite {
     animation: none;
   }
 
-  .pet-walker-walk,
-  .pet-walker-walk canvas {
+  .pet-walker-walk {
     animation: none;
+  }
+
+  .home-pet-sprite-frame {
+    animation: none;
+  }
+
+  .home-pet-sprite-frame:not(.home-pet-sprite-frame-0) {
+    opacity: 0;
   }
 }

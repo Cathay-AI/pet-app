@@ -6,12 +6,18 @@ import AuthStatus from "@/components/AuthStatus";
 import BottomNav from "@/components/BottomNav";
 import FriendsLeaderboard from "@/components/FriendsLeaderboard";
 import SuggestedUsers from "@/components/SuggestedUsers";
-import { getAuthState, loadCurrentNekoData, type AuthState } from "@/lib/nekoRepository";
+import {
+  loadCareStats,
+  loadCurrentNekoData,
+  loadPerUserCareStats,
+  type AuthState,
+  type CareStats,
+  type UserCareStats
+} from "@/lib/nekoRepository";
 import { fetchFriendsLeaderboard, fetchSuggestions, sendFriendRequest } from "@/lib/leaderboardApi";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { useRankHistory } from "@/hooks/useRankHistory";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { FriendsLeaderboard as FriendsLeaderboardType, LeaderboardEntry, SuggestedUser } from "@/types";
+import type { FriendsLeaderboard as FriendsLeaderboardType, SuggestedUser } from "@/types";
 
 export default function LeaderboardPage() {
   const router = useRouter();
@@ -21,16 +27,8 @@ export default function LeaderboardPage() {
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Track final sorted entries for rank history (after decay and sorting)
-  const [finalSortedEntries, setFinalSortedEntries] = useState<LeaderboardEntry[]>([]);
-  const { calculateRankChanges } = useRankHistory(finalSortedEntries);
-
-  // Handle sorted entries from FriendsLeaderboard component
-  const handleSortedEntriesChange = (entries: LeaderboardEntry[]) => {
-    const entriesWithRankChanges = calculateRankChanges(entries);
-    setFinalSortedEntries(entriesWithRankChanges);
-  };
+  const [stats, setStats] = useState<CareStats | null>(null);
+  const [userStats, setUserStats] = useState<UserCareStats[]>([]);
 
   // Load data function
   const loadData = async () => {
@@ -77,27 +75,26 @@ export default function LeaderboardPage() {
         return;
       }
 
-      // Load friends leaderboard
       setIsLoadingLeaderboard(true);
+      setIsLoadingSuggestions(true);
       try {
-        const friendsData = await fetchFriendsLeaderboard(session.access_token);
+        const today = new Date().toISOString().slice(0, 10);
+        const [friendsData, suggestionsData, careStats, perUserStats] = await Promise.all([
+          fetchFriendsLeaderboard(session.access_token),
+          fetchSuggestions(session.access_token, 10),
+          loadCareStats(today),
+          loadPerUserCareStats(today)
+        ]);
         setLeaderboard(friendsData);
+        setSuggestions(suggestionsData.suggestions);
+        setStats(careStats);
+        setUserStats(perUserStats);
         setError(null);
       } catch (err) {
-        console.error("Failed to load friends leaderboard:", err);
+        console.error("Failed to load leaderboard:", err);
         setError("載入好友排行榜失敗");
       } finally {
         setIsLoadingLeaderboard(false);
-      }
-
-      // Load suggestions
-      setIsLoadingSuggestions(true);
-      try {
-        const suggestionsData = await fetchSuggestions(session.access_token, 10);
-        setSuggestions(suggestionsData.suggestions);
-      } catch (err) {
-        console.error("Failed to load suggestions:", err);
-      } finally {
         setIsLoadingSuggestions(false);
       }
     } catch (err) {
@@ -201,12 +198,32 @@ export default function LeaderboardPage() {
           </div>
         </header>
 
+        {stats ? (
+          <section className="mb-5">
+            <h2 className="mb-3 text-lg font-black">今日互動統計</h2>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.total_events}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">照顧總次數</p>
+              </div>
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.unique_users}/{stats.total_users}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">活躍/總人數</p>
+              </div>
+              <div className="rounded-md border-4 border-[#3D2B1F] bg-white p-3 text-center shadow-[3px_3px_0_#3D2B1F]">
+                <p className="text-2xl font-black">{stats.avg_events_per_user}</p>
+                <p className="mt-1 text-xs font-black text-[#8B6F5E]">平均次數/人</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* Friends Leaderboard */}
         <FriendsLeaderboard
-          friends={finalSortedEntries.length > 0 ? finalSortedEntries : leaderboard?.friends ?? []}
+          friends={leaderboard?.friends ?? []}
           selfEntry={leaderboard?.selfEntry ?? null}
           isLoading={isLoadingLeaderboard}
-          onSortedEntriesChange={handleSortedEntriesChange}
+          userStats={userStats}
         />
 
         {/* Stats */}

@@ -39,6 +39,7 @@ class PetResponse(BaseModel):
     last_fed_at: datetime | None
     last_bath_at: datetime | None
     last_play_at: datetime | None
+    last_visited_at: datetime | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -61,6 +62,7 @@ class LeaderboardPetResponse(BaseModel):
     """Pet data returned in leaderboard including owner's username"""
 
     id: uuid.UUID
+    user_id: uuid.UUID
     username: str
     name: str
     type: PetType
@@ -72,6 +74,7 @@ class LeaderboardPetResponse(BaseModel):
     last_fed_at: datetime | None = None
     last_bath_at: datetime | None = None
     last_play_at: datetime | None = None
+    last_visited_at: datetime | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}

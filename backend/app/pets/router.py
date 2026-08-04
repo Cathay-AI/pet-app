@@ -92,7 +92,7 @@ async def get_leaderboard(
 @router.get(
     "/{pet_id}",
     response_model=PetResponse,
-    summary="Get a pet by ID (owner only)",
+    summary="Get any pet by ID (public for logged-in users)",
 )
 async def get_pet(
     pet_id: uuid.UUID,
@@ -100,10 +100,7 @@ async def get_pet(
     svc: PetService = Depends(_service),
 ) -> PetResponse:
     try:
-        pet = await svc.get_by_id(pet_id, current_user.id)
+        pet = await svc.get_by_id_public(pet_id)
     except ValueError as exc:
-        detail = str(exc)
-        if "not found" in detail:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return PetResponse.model_validate(pet)

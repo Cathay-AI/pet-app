@@ -23,6 +23,7 @@ export type PixelIconName =
   | "snack"
   | "home"
   | "rank"
+  | "stats"
   | "user";
 
 export type User = {
@@ -58,6 +59,7 @@ export type NekoData = {
 
 export type LeaderboardEntry = {
   id: string;
+  userId: string;
   username: string;
   petName: string;
   petType: PetType;
@@ -66,7 +68,7 @@ export type LeaderboardEntry = {
   cleanliness: number;
   mood: number;
   isSick: boolean;
-  lastCareAt: string;
+  lastCareAt: string | undefined;
   isSelf?: boolean;
   isFriend?: boolean;
   rank?: number;

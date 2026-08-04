@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LeaderboardEntry } from "@/types";
 
 const STORAGE_KEY = "neko_rank_history";
@@ -21,12 +21,16 @@ type StoredHistory = {
  * Compares current rankings with previous snapshot stored in localStorage
  */
 export function useRankHistory(currentEntries: LeaderboardEntry[]) {
-  const previousHistoryRef = useRef<RankSnapshot[]>([]);
+  const [previousHistory, setPreviousHistory] = useState<RankSnapshot[]>([]);
 
   useEffect(() => {
-    // Load previous history on mount
-    previousHistoryRef.current = loadHistory();
+    setPreviousHistory(loadHistory());
   }, []);
+
+  const entriesWithRankChanges = useMemo(
+    () => calculateRankChanges(currentEntries, previousHistory),
+    [currentEntries, previousHistory]
+  );
 
   useEffect(() => {
     if (currentEntries.length === 0) return;
@@ -42,41 +46,26 @@ export function useRankHistory(currentEntries: LeaderboardEntry[]) {
     saveHistory(newHistory);
   }, [currentEntries]);
 
-  /**
-   * Calculate rank changes for entries based on previous history
-   */
-  const calculateRankChanges = (entries: LeaderboardEntry[]): LeaderboardEntry[] => {
-    const previousRankMap = new Map<string, number>();
-    previousHistoryRef.current.forEach((record) => {
-      previousRankMap.set(record.petId, record.rank);
-    });
+  return entriesWithRankChanges;
+}
 
-    return entries.map((entry, currentIndex) => {
-      const currentRank = entry.rank ?? currentIndex + 1;
-      const previousRank = previousRankMap.get(entry.id);
+function calculateRankChanges(
+  entries: LeaderboardEntry[],
+  previousHistory: RankSnapshot[]
+): LeaderboardEntry[] {
+  const previousRankMap = new Map(
+    previousHistory.map((record) => [record.petId, record.rank])
+  );
 
-      if (previousRank === undefined) {
-        // New entry
-        return {
-          ...entry,
-          rank: currentRank,
-          rankChange: undefined
-        };
-      }
-
-      const rankChange = previousRank - currentRank; // 正數=上升，負數=下降
-
-      return {
-        ...entry,
-        rank: currentRank,
-        rankChange
-      };
-    });
-  };
-
-  return {
-    calculateRankChanges
-  };
+  return entries.map((entry, currentIndex) => {
+    const currentRank = currentIndex + 1;
+    const previousRank = previousRankMap.get(entry.id);
+    return {
+      ...entry,
+      rank: currentRank,
+      rankChange: previousRank === undefined ? undefined : previousRank - currentRank
+    };
+  });
 }
 
 function loadHistory(): RankSnapshot[] {

@@ -18,7 +18,7 @@ class LeaderboardPetEntry(BaseModel):
     mood: int = Field(ge=0, le=100)
     is_sick: bool
     health_score: int = Field(ge=0, le=100, description="Calculated health score")
-    last_care_at: datetime
+    last_care_at: datetime | None
     updated_at: datetime
     is_self: bool = Field(default=False, description="Whether this is the current user's pet")
     is_friend: bool = Field(default=False, description="Whether this user is a friend")
