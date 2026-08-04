@@ -1,61 +1,160 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthStatus from "@/components/AuthStatus";
 import BottomNav from "@/components/BottomNav";
-import PetCanvas from "@/components/PetCanvas";
-import { decayPet, formatRelativeTime, healthScore } from "@/lib/gameLogic";
-import { loadCurrentNekoData, loadLeaderboard, loadCareStats, loadPerUserCareStats, saveCurrentNekoData, type AuthState, type CareStats, type UserCareStats } from "@/lib/nekoRepository";
-import { upsertPet } from "@/lib/petCollection";
-import type { LeaderboardEntry, NekoData } from "@/types";
-
-const typeLabel: Record<string, string> = {
-  visit_pet: "摸摸",
-  feed: "餵食",
-  bath: "洗澡",
-  play: "玩耍"
-};
+import FriendsLeaderboard from "@/components/FriendsLeaderboard";
+import SuggestedUsers from "@/components/SuggestedUsers";
+import {
+  loadCareStats,
+  loadCurrentNekoData,
+  loadPerUserCareStats,
+  type AuthState,
+  type CareStats,
+  type UserCareStats
+} from "@/lib/nekoRepository";
+import { fetchFriendsLeaderboard, fetchSuggestions, sendFriendRequest } from "@/lib/leaderboardApi";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import type { FriendsLeaderboard as FriendsLeaderboardType, SuggestedUser } from "@/types";
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const [data, setData] = useState<NekoData | null>(null);
   const [auth, setAuth] = useState<AuthState | null>(null);
-  const [rows, setRows] = useState<LeaderboardEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<FriendsLeaderboardType | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<CareStats | null>(null);
   const [userStats, setUserStats] = useState<UserCareStats[]>([]);
 
-  useEffect(() => {
-    loadCurrentNekoData().then(async (loaded) => {
+  // Load data function
+  const loadData = async () => {
+    try {
+      // Check auth and user/pet data (preserve existing behavior)
+      const loaded = await loadCurrentNekoData();
       setAuth(loaded.auth);
+
       if (loaded.auth.isConfigured && !loaded.auth.userId) {
         router.replace("/login");
         return;
       }
+
+      // Redirect to gacha if user has no pet (preserve existing onboarding flow)
       if (!loaded.data.user || !loaded.data.pet) {
         router.replace("/gacha");
         return;
       }
-      const decayedPet = decayPet(loaded.data.pet);
-      const decayed = upsertPet({ ...loaded.data, pet: decayedPet, activePetId: decayedPet.id }, decayedPet);
-      await saveCurrentNekoData(decayed);
-      setData(decayed);
-      setRows((await loadLeaderboard(decayed)).sort((a, b) => healthScore(b) - healthScore(a)));
 
-      const today = new Date().toISOString().slice(0, 10);
-      const [s, u] = await Promise.all([loadCareStats(today), loadPerUserCareStats(today)]);
-      setStats(s);
-      setUserStats(u);
-    });
+      if (!loaded.auth.userId) {
+        setError("請先登入以查看好友排行榜");
+        setIsLoadingLeaderboard(false);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
+      // Get Supabase token
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
+        setError("Supabase 未配置");
+        setIsLoadingLeaderboard(false);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setError("請先登入以查看好友排行榜");
+        setIsLoadingLeaderboard(false);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
+      setIsLoadingLeaderboard(true);
+      setIsLoadingSuggestions(true);
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const [friendsData, suggestionsData, careStats, perUserStats] = await Promise.all([
+          fetchFriendsLeaderboard(session.access_token),
+          fetchSuggestions(session.access_token, 10),
+          loadCareStats(today),
+          loadPerUserCareStats(today)
+        ]);
+        setLeaderboard(friendsData);
+        setSuggestions(suggestionsData.suggestions);
+        setStats(careStats);
+        setUserStats(perUserStats);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to load leaderboard:", err);
+        setError("載入好友排行榜失敗");
+      } finally {
+        setIsLoadingLeaderboard(false);
+        setIsLoadingSuggestions(false);
+      }
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setError("載入資料失敗");
+      setIsLoadingLeaderboard(false);
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    loadData();
   }, [router]);
 
-  const rankedRows = useMemo(() => [...rows].sort((a, b) => healthScore(b) - healthScore(a)), [rows]);
+  // Auto-refresh every 3 minutes
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(loadData, 3 * 60 * 1000, true);
 
-  if (!data?.user || !data.pet) {
+  // Handle add friend
+  const handleAddFriend = async (friendCode: string) => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) throw new Error("Supabase 未配置");
+
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error("請先登入");
+
+    await sendFriendRequest(session.access_token, friendCode);
+
+    // Refresh suggestions after adding friend
+    await loadData();
+  };
+
+  // Format last updated time
+  const formatLastUpdated = (date: Date) => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return "剛剛更新";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} 分鐘前更新`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours} 小時前更新`;
+  };
+
+  if (error && !leaderboard) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#FDF8F0] text-sm font-black text-[#3D2B1F]">
-        排行榜載入中...
+      <main className="min-h-screen bg-[#FDF8F0] px-4 pb-28 pt-5 text-[#3D2B1F]">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-md border-4 border-[#E24B4A] bg-[#FFE0DA] p-6 text-center">
+            <p className="text-lg font-black">⚠️ {error}</p>
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="mt-4 rounded-md border-2 border-[#3D2B1F] bg-[#E8734A] px-4 py-2 text-sm font-black text-white"
+            >
+              前往登入
+            </button>
+          </div>
+        </div>
+        <BottomNav />
       </main>
     );
   }
@@ -63,13 +162,39 @@ export default function LeaderboardPage() {
   return (
     <main className="min-h-screen bg-[#FDF8F0] px-4 pb-28 pt-5 text-[#3D2B1F]">
       <div className="mx-auto max-w-md">
+        {/* Header */}
         <header className="mb-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-[#8B6F5E]">公開狀態 · 每 5 分鐘更新</p>
-              <h1 className="text-3xl font-black">照顧近況</h1>
+              <h1 className="text-3xl font-black">好友排行</h1>
+              <p className="mt-1 text-xs text-[#8B6F5E]">
+                {formatLastUpdated(lastUpdated)} · 每 3 分鐘自動更新
+              </p>
             </div>
-            <AuthStatus auth={auth} />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={refresh}
+                disabled={isRefreshing}
+                className="grid h-10 w-10 place-items-center rounded-md border-2 border-[#3D2B1F] bg-white transition hover:bg-[#F5E6C8] disabled:opacity-50"
+                title="手動刷新"
+              >
+                <svg
+                  className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+              <AuthStatus auth={auth} />
+            </div>
           </div>
         </header>
 
@@ -93,74 +218,34 @@ export default function LeaderboardPage() {
           </section>
         ) : null}
 
-        <section className="overflow-hidden rounded-md border-4 border-[#3D2B1F] bg-white shadow-[6px_6px_0_#3D2B1F]">
-          {rankedRows.map((entry, index) => {
-            const score = healthScore(entry);
-            const weakest = weakestCare(entry);
-            const userStat = userStats.find((u) => u.user_id === entry.userId);
-            return (
-              <Link
-                key={entry.id}
-                href={`/rooms/${encodeURIComponent(entry.id)}`}
-                aria-label={`拜訪 ${entry.username} 的房間`}
-                className={`grid grid-cols-[3rem_3.75rem_1fr_3.25rem] items-center gap-2 border-b-4 border-[#F5E6C8] p-3 last:border-b-0 ${
-                  entry.isSelf ? "bg-[#F5E6C8] outline-none focus:bg-[#FFE0DA]" : "bg-white focus:bg-[#FDF8F0]"
-                }`}
-              >
-                <div className="text-center">
-                  <p className="text-lg font-black">{rankLabel(index + 1)}</p>
-                  {entry.isSelf ? <p className="text-xs font-black text-[#E8734A]">▶</p> : null}
-                </div>
-                <div className="grid h-14 w-14 place-items-center rounded bg-[#1A1A2E]">
-                  <PetCanvas
-                    type={entry.petType}
-                    color={entry.petColor}
-                    animation={score < 30 ? "sad" : "idle"}
-                    hunger={entry.hunger}
-                    cleanliness={entry.cleanliness}
-                    size={52}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-base font-black">{entry.username}</p>
-                  <p className="truncate text-xs font-bold text-[#8B6F5E]">
-                    {entry.petName} · {entry.petType === "cat" ? "貓" : "狗"} · {entry.lastCareAt ? formatRelativeTime(entry.lastCareAt) : "尚未照顧"}
-                  </p>
-                  {userStat ? (
-                    <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">
-                      今日 {userStat.by_type.map((t) => `${typeLabel[t.type] ?? t.type} ${t.count}`).join(" · ")}
-                    </p>
-                  ) : (
-                    <p className="mt-1 truncate text-xs font-bold text-[#8B6F5E]">今日尚未互動</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-black ${score < 40 ? "text-[#E24B4A]" : "text-[#3D2B1F]"}`}>{score}</p>
-                  <p className="text-xs font-black text-[#8B6F5E]">分</p>
-                </div>
-              </Link>
-            );
-          })}
-        </section>
+        {/* Friends Leaderboard */}
+        <FriendsLeaderboard
+          friends={leaderboard?.friends ?? []}
+          selfEntry={leaderboard?.selfEntry ?? null}
+          isLoading={isLoadingLeaderboard}
+          userStats={userStats}
+        />
 
+        {/* Stats */}
+        {leaderboard && !isLoadingLeaderboard ? (
+          <div className="mt-3 rounded-md border-2 border-[#D4A96A] bg-[#FDF8F0] px-4 py-2 text-center">
+            <p className="text-xs font-black text-[#8B6F5E]">
+              目前有 {leaderboard.totalFriends} 位好友 ·
+              {leaderboard.selfEntry ? " 你尚未在排行榜中" : " 繼續加油！"}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Suggested Users */}
+        <div className="mt-6">
+          <SuggestedUsers
+            suggestions={suggestions}
+            isLoading={isLoadingSuggestions}
+            onAddFriend={handleAddFriend}
+          />
+        </div>
       </div>
       <BottomNav />
     </main>
   );
-}
-
-function rankLabel(rank: number) {
-  if (rank === 1) return "1st";
-  if (rank === 2) return "2nd";
-  if (rank === 3) return "3rd";
-  return `${rank}th`;
-}
-
-function weakestCare(entry: LeaderboardEntry) {
-  const stats = [
-    { label: "飽足", value: entry.hunger },
-    { label: "清潔", value: entry.cleanliness },
-    { label: "心情", value: entry.mood }
-  ];
-  return stats.sort((a, b) => a.value - b.value)[0];
 }

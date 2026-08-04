@@ -70,6 +70,34 @@ export type LeaderboardEntry = {
   isSick: boolean;
   lastCareAt: string | undefined;
   isSelf?: boolean;
+  isFriend?: boolean;
+  rank?: number;
+  rankChange?: number; // 正數=上升, 負數=下降, null/undefined=無變化或新進榜
+  healthScore?: number;
+};
+
+export type FriendsLeaderboard = {
+  friends: LeaderboardEntry[];
+  selfEntry: LeaderboardEntry | null;
+  totalFriends: number;
+  lastUpdated: string;
+};
+
+export type SuggestedUser = {
+  id: string;
+  username: string;
+  friendCode: string;
+  petName: string;
+  petType: PetType;
+  petColor: PetColorId;
+  healthScore: number;
+  mutualFriends: number;
+  reason: string;
+};
+
+export type SuggestionsResponse = {
+  suggestions: SuggestedUser[];
+  total: number;
 };
 
 export type Food = {

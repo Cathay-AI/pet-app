@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth.router import router as auth_router
 from app.care_events.router import router as care_events_router
 from app.core.config import settings
+from app.leaderboard.router import router as leaderboard_router
 from app.pets.router import router as pets_router
 from app.users.router import router as users_router
 
@@ -39,6 +40,7 @@ app.add_middleware(
 
 # ─── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(leaderboard_router, prefix="/api/v1")
 app.include_router(care_events_router, prefix="/api/v1")
 app.include_router(pets_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
